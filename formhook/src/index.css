@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+.custom-quill .ql-container {
+  @apply h-40; /* or h-[300px] */
+}
+.custom-quill .ql-editor {
+  @apply h-full overflow-y-auto;
+}
