@@ -1,40 +1,31 @@
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
-import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
 
   return (
     <div>
-      <button
-        onClick={() => {
-          setUser(null);
-          googleLogout();
-        }}
-      >
-        logout
-      </button>
-      {user ? (
-        <>singed in as {user.email}</>
+      {email ? (
+        <div>
+          <p>{email}</p>
+          <button
+            onClick={() => {
+              setEmail("");
+              googleLogout();
+            }}
+          >
+            Logout
+          </button>
+        </div>
       ) : (
         <GoogleLogin
-          onSuccess={(credentialResponse) => {
-            axios
-              .get(
-                `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${credentialResponse.credential}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${user.credentialResponse.credential}`,
-                    Accept: "application/json",
-                  },
-                }
-              )
-              .then((res) => setUser(res.data));
+          onSuccess={(res) => {
+            console.log(res);
+            setEmail(jwtDecode(res.credential).email);
           }}
-          onError={() => {
-            console.log("Login Failed");
-          }}
+          onError={(err) => console.log(err)}
         />
       )}
     </div>
