@@ -13,10 +13,11 @@ export default function App() {
   const [equalButtonPressed, setEqualButtonPressed] = useState(false);
 
   const getString = (val: string) => {
+    if (val === ".") return "0.";
     let x = Number(val).toString();
-    // if (val.includes(".") && !x.includes(".")) {
-    //   x = x + ".";
-    // }
+    if (val.includes(".") && !x.includes(".")) {
+      x = x + ".";
+    }
     return x;
   };
 
@@ -42,25 +43,21 @@ export default function App() {
     return result.toString();
   };
 
-  // const processCalc = (num: number, input: string) => {
-  //   let res = 0;
-  //   if (input === "NEG") {
-  //     res = num * -1;
-  //   } else if (input === "INV") {
-  //     res = 1 / num;
-  //   } else if (input === "SQR") {
-  //     res = num * num;
-  //   } else if (input === "SQRT") {
-  //     res = Math.sqrt(num);
-  //   }
-  //   return res;
-  // };
+  const processCalc = (num: number, input: string) => {
+    let res = 0;
+    if (input === "NEG") {
+      res = num * -1;
+    } else if (input === "INV") {
+      res = 1 / num;
+    } else if (input === "SQR") {
+      res = num * num;
+    } else if (input === "SQRT") {
+      res = Math.sqrt(num);
+    }
+    return res;
+  };
 
   const processInput = (input: inputType) => {
-    console.log("input", input);
-    console.log("currVal", currVal);
-    console.log("stack", stack);
-
     const helper1 = (a: string, b: string) => {
       if (a.includes(".") && b === ".") return a;
       return a + b;
@@ -98,9 +95,18 @@ export default function App() {
           { type: "OPERATOR", val: input.val },
         ]);
         setCurrVal({ type: "OPERATOR", val: input.val });
-        // } else if (input.type === "CALC") {
-        //   const res = processCalc(Number(currVal.val), input.val);
-        //   setCurrVal({ type: "NUMBER", val: res.toString() });
+      } else if (input.type === "CALC") {
+        const res = processCalc(Number(currVal.val), input.val);
+        if (input.val !== "NEG") {
+          setHistory([
+            ...history,
+            [
+              input.val.toLowerCase() + "(" + getString(currVal.val) + ") = ",
+              res.toString(),
+            ],
+          ]);
+        }
+        setCurrVal({ type: "NUMBER", val: res.toString() });
       } else if (input.type === "BACKSPACE") {
         setCurrVal({
           type: "NUMBER",
@@ -131,9 +137,18 @@ export default function App() {
         setCurrVal({ type: "NUMBER", val: input.val });
       } else if (input.type === "OPERATOR") {
         setStack([stack[0], { type: "OPERATOR", val: input.val }]);
-        // } else if (input.type === "CALC") {
-        //   const res = processCalc(Number(stack[0].val), input.val);
-        //   setCurrVal({ type: "NUMBER", val: res.toString() });
+      } else if (input.type === "CALC") {
+        const res = processCalc(Number(stack[0].val), input.val);
+        if (input.val !== "NEG") {
+          setHistory([
+            ...history,
+            [
+              input.val.toLowerCase() + "(" + getString(stack[0].val) + ") = ",
+              res.toString(),
+            ],
+          ]);
+        }
+        setCurrVal({ type: "NUMBER", val: res.toString() });
       } else if (input.type === "EQUAL") {
         const res = applyOperator(
           Number(stack[0].val),
@@ -155,11 +170,11 @@ export default function App() {
         setCurrVal({ type: "NUMBER", val: res.toString() });
         setStack([]);
       }
-      // } else if (currVal.type === "CALC") {
-      //   if (input.type === "NUMBER") {
-      //     setCurrVal({ type: "NUMBER", val: input.val });
-      //     setStack([]);
-      //   }
+    } else if (currVal.type === "CALC") {
+      if (input.type === "NUMBER") {
+        setCurrVal({ type: "NUMBER", val: input.val });
+        setStack([]);
+      }
     }
   };
 
@@ -214,7 +229,7 @@ export default function App() {
         .
       </button>
       <br />
-      {/* <button
+      <button
         type="button"
         onClick={() => processInput({ type: "CALC", val: "NEG" })}
       >
@@ -240,7 +255,7 @@ export default function App() {
         onClick={() => processInput({ type: "CALC", val: "SQRT" })}
       >
         rootx
-      </button> */}
+      </button>
       <button
         type="button"
         onClick={() => processInput({ type: "EQUAL", val: "EQL" })}
