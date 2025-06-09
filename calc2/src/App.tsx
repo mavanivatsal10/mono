@@ -1,6 +1,7 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "./components/Button";
+import { set } from "react-hook-form";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const OPERATORS = ["+", "-", "*", "/"];
@@ -82,19 +83,28 @@ export default function App() {
     else if (operator === "/") return "÷";
   };
 
-  const compute = () => {
-    console.log("from compute function: ", prev, op, curr);
-    let res = prev as number;
+  const compute = (a: number | null, op: string | null, b: number) => {
+    let res = null;
+    if (a === null || op === null) return null;
 
-    if (op === "+") res += curr;
-    else if (op === "-") res -= curr;
-    else if (op === "*") res *= curr;
+    if (op === "+") res = a + b;
+    else if (op === "-") res = a - b;
+    else if (op === "*") res = a * b;
     else if (op === "/") {
-      if (curr === 0) return null;
-      res /= curr;
+      if (b === 0) return null;
+      res = a / b;
     }
 
     return res;
+  };
+
+  const getPrecision = (num: number | string) => {
+    if (typeof num === "string") {
+      num = Number(num);
+      return Number(num.toFixed(12)).toString();
+    } else {
+      return Number(num.toFixed(12));
+    }
   };
 
   const handleOperator = (btnid: string) => {
@@ -118,14 +128,14 @@ export default function App() {
       setResetDisplay(true);
     } else if ([...DIGITS, "."].includes(prevBtnId)) {
       // we have prev and op set to non-null value
-      const res = compute();
+      const res = compute(prev, op, curr);
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
       } else {
-        setTitle(res.toString());
+        setTitle(Number(res.toFixed(12)).toString());
         setCurr(res);
-        setSubtitle(res.toString() + " " + getSymbol(btnid) + " ");
+        setSubtitle(getPrecision(res) + " " + getSymbol(btnid) + " ");
         setPrev(res);
         setOp(btnid);
         setResetDisplay(true);
@@ -152,26 +162,30 @@ export default function App() {
       setResetDisplay(true);
     } else if (OPERATORS.includes(prevBtnId as string) || prevBtnId === "eq") {
       // we have prev and op set to non-null value
-      const res = compute();
+      const res = compute(prev, op, curr);
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
       } else {
-        setTitle(res.toString());
-        setSubtitle(`${title} ${getSymbol(op)} ${curr} = `);
+        setTitle(getPrecision(res).toString());
+        setSubtitle(
+          `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
+        );
         setPrev(res);
         setResetDisplay(true);
       }
     } else if ([...DIGITS, "."].includes(prevBtnId)) {
       // we have prev and op set to non-null value
-      console.log("inside!!");
-      const res = compute();
+      const res = compute(prev, op, curr);
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
       } else {
-        setTitle(res.toString());
-        setSubtitle(`${prev} ${getSymbol(op)} ${curr} = `);
+        setTitle(getPrecision(res).toString());
+        setSubtitle(
+          `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
+        );
+        setPrev(res);
       }
     }
     setPrevBtnId("eq");
@@ -186,15 +200,15 @@ export default function App() {
       handleClear();
     } else if (btnid === "ce") {
       handleClearEntry();
+    } else if (btnid === "eq") {
+      handleEqual();
     } else if (btnid === "backspace") {
       handleBackspace();
     } else if (OPERATORS.includes(btnid)) {
       handleOperator(btnid);
-    } else if (btnid === "eq") {
-      handleEqual();
-      // } else if (btnid === "neg") {
-      //   handleToggleSign();
     }
+    // } else if (btnid === "neg") {
+    //   handleToggleSign();
   };
 
   return (
