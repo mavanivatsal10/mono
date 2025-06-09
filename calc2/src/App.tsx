@@ -14,6 +14,7 @@ export default function App() {
   const [curr, setCurr] = useState(0);
   const [resetDisplay, setResetDisplay] = useState(false);
   const [prevBtnId, setPrevBtnId] = useState<string | null>(null);
+  const [toggleFirst, setToggleFirst] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -59,23 +60,23 @@ export default function App() {
     setCurr(0);
   };
 
-  const handleBackspace = () => {
-    if (!prevBtnId || [...DIGITS, ".", "neg"].includes(prevBtnId)) {
-      if (title.length === 1 || (title.length === 2 && title[0] === "-")) {
-        setTitle("0");
-      } else {
-        setTitle(title.slice(0, -1));
-      }
-    }
-    // } else if (prevBtnId === "eq") {
-    //   setSubtitle("");
-    //   setPrev(null);
-    //   setOp(null);
-    //   setResetDisplay(true);
-    //   setPrevBtnId(null);
-    // }
-    setPrevBtnId("backspace");
-  };
+  // const handleBackspace = () => {
+  //   if (!prevBtnId || [...DIGITS, ".", "neg"].includes(prevBtnId)) {
+  //     if (title.length === 1 || (title.length === 2 && title[0] === "-")) {
+  //       setTitle("0");
+  //     } else {
+  //       setTitle(title.slice(0, -1));
+  //     }
+  //   }
+  //   // } else if (prevBtnId === "eq") {
+  //   //   setSubtitle("");
+  //   //   setPrev(null);
+  //   //   setOp(null);
+  //   //   setResetDisplay(true);
+  //   //   setPrevBtnId(null);
+  //   // }
+  //   setPrevBtnId("backspace");
+  // };
 
   const getSymbol = (operator: string) => {
     if (operator === "+" || operator === "-") return operator;
@@ -133,7 +134,7 @@ export default function App() {
         handleClear();
         setTitle("Cannot divide by zero");
       } else {
-        setTitle(Number(res.toFixed(12)).toString());
+        setTitle(getPrecision(res).toString());
         setCurr(res);
         setSubtitle(getPrecision(res) + " " + getSymbol(btnid) + " ");
         setPrev(res);
@@ -143,16 +144,6 @@ export default function App() {
     }
     setPrevBtnId(btnid);
   };
-
-  // const handleToggleSign = () => {
-  //   if (!prevBtnId || [...DIGITS, "."].includes(prevBtnId)) {
-  //     if (title === "0") return;
-  //     setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-  //   } else if (prevBtnId === "eq") {
-  //     setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-  //     setSubtitle(`negate( ${subtitle} )`);
-  //   }
-  // };
 
   const handleEqual = () => {
     if (prevBtnId === null || prev === null || op === null) {
@@ -189,6 +180,20 @@ export default function App() {
       }
     }
     setPrevBtnId("eq");
+    setToggleFirst(true);
+  };
+
+  const handleToggleSign = () => {
+    if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
+      if (title === "0") return;
+      setTitle(title.includes("-") ? title.slice(1) : "-" + title);
+      setCurr(-1 * curr);
+    } else if (prevBtnId === "eq") {
+      setTitle(title.includes("-") ? title.slice(1) : "-" + title);
+      setCurr(-1 * curr);
+      setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
+    }
+    setToggleFirst(false);
   };
 
   const processInput = (btnid: string) => {
@@ -200,15 +205,15 @@ export default function App() {
       handleClear();
     } else if (btnid === "ce") {
       handleClearEntry();
-    } else if (btnid === "eq") {
-      handleEqual();
-    } else if (btnid === "backspace") {
-      handleBackspace();
     } else if (OPERATORS.includes(btnid)) {
       handleOperator(btnid);
+    } else if (btnid === "eq") {
+      handleEqual();
+    } else if (btnid === "neg") {
+      handleToggleSign();
+      // } else if (btnid === "backspace") {
+      //   handleBackspace();
     }
-    // } else if (btnid === "neg") {
-    //   handleToggleSign();
   };
 
   return (
