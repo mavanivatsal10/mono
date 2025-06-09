@@ -1,20 +1,17 @@
 import type { JSX } from "react";
-import type { inputType } from "../types";
 
 export default function Button({
   displayVal,
-  input,
-  processInput,
+  onClick,
   classes,
   variant,
   ref,
 }: {
   displayVal: string | JSX.Element;
-  input: inputType;
-  processInput: (input: inputType) => void;
   classes?: string;
+  onClick: () => void;
   variant: "dark" | "light" | "orange";
-  ref: any;
+  ref?: any;
 }) {
   let variantStyle = "";
   if (variant === "dark") {
@@ -28,7 +25,7 @@ export default function Button({
     <button
       type="button"
       className={`flex items-center justify-center ${classes} ${variantStyle} transition-colors duration-100 ease-in-out text-white rounded-sm p-4 text-lg shadow-md`}
-      onClick={() => processInput(input)}
+      onClick={onClick}
       ref={ref}
     >
       {displayVal}
