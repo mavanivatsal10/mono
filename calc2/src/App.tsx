@@ -23,7 +23,7 @@ export default function App() {
       handleClear();
       setTitle(btnid);
       setCurr(Number(btnid));
-    } else if (!prevBtnId || resetDisplay || title === "0") {
+    } else if (prevBtnId === null || resetDisplay || title === "0") {
       setTitle(btnid);
       setCurr(Number(btnid));
       setResetDisplay(false);
@@ -31,6 +31,7 @@ export default function App() {
       setTitle(title + btnid);
       setCurr(Number(title + btnid));
     }
+    setToggleFirst(true);
     setPrevBtnId(btnid);
   };
 
@@ -41,6 +42,10 @@ export default function App() {
       setResetDisplay(false);
     } else if (!title.includes(".")) {
       setTitle(title + ".");
+    } else if (prevBtnId === "eq") {
+      handleClear();
+      setTitle("0.");
+      setCurr(0);
     }
     setPrevBtnId(".");
   };
@@ -109,40 +114,38 @@ export default function App() {
   };
 
   const handleOperator = (btnid: string) => {
+    const symbol = getSymbol(btnid);
+    const val = Number(title);
     if (prevBtnId === "eq") {
-      setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
-      setPrev(Number(title));
-      setOp(btnid);
-      setCurr(Number(title));
-      setResetDisplay(true);
+      setSubtitle(val.toString() + " " + symbol + " ");
+      setPrev(val);
+      setCurr(val);
       setPrevBtnId(btnid);
     } else if (prevBtnId === null || prev === null || op === null) {
-      setTitle(Number(title).toString());
-      setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
-      setPrev(Number(title));
-      setOp(btnid);
-      setCurr(Number(title));
-      setResetDisplay(true);
+      setTitle(val.toString());
+      setSubtitle(val.toString() + " " + symbol + " ");
+      setPrev(val);
+      setCurr(val);
     } else if (OPERATORS.includes(prevBtnId)) {
-      setOp(btnid);
-      setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
-      setResetDisplay(true);
+      setSubtitle(val.toString() + " " + symbol + " ");
     } else if ([...DIGITS, "."].includes(prevBtnId)) {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
+        return;
       } else {
         setTitle(getPrecision(res).toString());
         setCurr(res);
-        setSubtitle(getPrecision(res) + " " + getSymbol(btnid) + " ");
+        setSubtitle(getPrecision(res) + " " + symbol + " ");
         setPrev(res);
-        setOp(btnid);
-        setResetDisplay(true);
       }
     }
+    setOp(btnid);
+    setResetDisplay(true);
     setPrevBtnId(btnid);
+    setToggleFirst(true);
   };
 
   const handleEqual = () => {
@@ -157,20 +160,24 @@ export default function App() {
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
+        return;
+      } else if (subtitle.split(" ").length >= 5 && subtitle.includes("(")) {
+        setSubtitle(subtitle + " = ");
       } else {
-        setTitle(getPrecision(res).toString());
         setSubtitle(
           `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
         );
-        setPrev(res);
-        setResetDisplay(true);
       }
+      setTitle(getPrecision(res).toString());
+      setPrev(res);
+      setResetDisplay(true);
     } else if ([...DIGITS, "."].includes(prevBtnId)) {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
         handleClear();
         setTitle("Cannot divide by zero");
+        return;
       } else {
         setTitle(getPrecision(res).toString());
         setSubtitle(
@@ -178,6 +185,9 @@ export default function App() {
         );
         setPrev(res);
       }
+      // } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
+      //   console.log(subtitle);
+      //   setSubtitle(`${subtitle} = `);
     }
     setPrevBtnId("eq");
     setToggleFirst(true);
@@ -186,13 +196,35 @@ export default function App() {
   const handleToggleSign = () => {
     if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
       if (title === "0") return;
-      setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-      setCurr(-1 * curr);
-    } else if (prevBtnId === "eq") {
-      setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-      setCurr(-1 * curr);
+    } else if (["eq", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
       setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
+    } else if (OPERATORS.includes(prevBtnId)) {
+      const splitSub = subtitle.split(" ");
+      if (splitSub.length === 3) {
+        setSubtitle(`${splitSub[0]} ${splitSub[1]} negate( ${title} )`);
+      } else if (splitSub.length >= 5) {
+        const [a, b, ...c] = splitSub;
+        const joinedC = c.join(" ");
+        setSubtitle(`${a} ${b} negate( ${joinedC} )`);
+      }
     }
+    setTitle(title.includes("-") ? title.slice(1) : "-" + title);
+    setCurr(-1 * curr);
+    setToggleFirst(false);
+  };
+
+  const handleInverse = () => {
+    // if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
+    if (curr === 0) {
+      handleClear();
+      setTitle("Cannot divide by zero");
+      return;
+    }
+    setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
+    setTitle(getPrecision(1 / curr).toString());
+    setCurr(1 / curr);
+    // }
+    setPrevBtnId("inv");
     setToggleFirst(false);
   };
 
@@ -213,6 +245,8 @@ export default function App() {
       handleToggleSign();
       // } else if (btnid === "backspace") {
       //   handleBackspace();
+    } else if (btnid === "inv") {
+      handleInverse();
     }
   };
 
