@@ -1,7 +1,6 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "./components/Button";
-import { set } from "react-hook-form";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const OPERATORS = ["+", "-", "*", "/"];
@@ -146,16 +145,26 @@ export default function App() {
   };
 
   const handleEqual = () => {
-    if (prevBtnId === null || prev === null || op === null) {
+    if (/^.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
+      // matches sequence ...( ... )
+      setSubtitle(`${subtitle} = `);
+      if (prev !== null && op !== null) {
+        const res = compute(prev, op, curr);
+        if (res === null) {
+          handleClear();
+          setTitle("Cannot divide by zero");
+        } else {
+          setTitle(getPrecision(res).toString());
+          setPrev(res);
+          setResetDisplay(true);
+        }
+      }
+    } else if (prevBtnId === null || prev === null || op === null) {
       setTitle(Number(title).toString());
       setSubtitle(Number(title).toString() + " = ");
       setCurr(Number(title));
       setResetDisplay(true);
-    } else if (
-      OPERATORS.includes(prevBtnId as string) ||
-      prevBtnId === "eq" ||
-      prevBtnId === "neg"
-    ) {
+    } else if (OPERATORS.includes(prevBtnId as string) || prevBtnId === "eq") {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
@@ -163,14 +172,9 @@ export default function App() {
         setTitle("Cannot divide by zero");
       } else {
         setTitle(getPrecision(res).toString());
-        if (/.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
-          // matches sequence ...( ... ) but it should not contain = sign
-          setSubtitle(`${subtitle} = `);
-        } else {
-          setSubtitle(
-            `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
-          );
-        }
+        setSubtitle(
+          `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
+        );
         setPrev(res);
         setResetDisplay(true);
       }
