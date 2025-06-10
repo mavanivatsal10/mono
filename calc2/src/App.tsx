@@ -201,10 +201,10 @@ export default function App() {
       if (title === "0") return;
     } else if (prevBtnId === "eq") {
       setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
-    } else if (prevBtnId === "neg") {
+    } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
       const splitSub = subtitle.split(" ");
       if (splitSub.length === 3) {
-        setSubtitle(`negate ( ${subtitle} )`);
+        setSubtitle(`negate( ${subtitle} )`);
       } else if (splitSub.length >= 5) {
         const [a, b, ...c] = splitSub;
         setSubtitle(`${a} ${b} negate( ${c.join(" ")} )`);
@@ -216,6 +216,33 @@ export default function App() {
     setCurr(-1 * curr);
     setToggleFirst(false);
     setPrevBtnId("neg");
+  };
+
+  const handleInverse = () => {
+    if (title === "0") {
+      handleClear();
+      setTitle("Cannot divide by zero");
+    } else if (
+      prevBtnId === "eq" ||
+      prevBtnId === null ||
+      [...DIGITS, "."].includes(prevBtnId)
+    ) {
+      setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
+    } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
+      const splitSub = subtitle.split(" ");
+      if (splitSub.length === 3) {
+        setSubtitle(`1/( ${subtitle} )`);
+      } else if (splitSub.length >= 5) {
+        const [a, b, ...c] = splitSub;
+        setSubtitle(`${a} ${b} 1/( ${c.join(" ")} )`);
+      }
+    } else if (OPERATORS.includes(prevBtnId)) {
+      setSubtitle(`${subtitle}1/( ${title} )`);
+    }
+    setTitle(getPrecision(1 / curr).toString());
+    setCurr(1 / curr);
+    setToggleFirst(false);
+    setPrevBtnId("inv");
   };
 
   const processInput = (btnid: string) => {
@@ -235,6 +262,8 @@ export default function App() {
       handleOperator(btnid);
     } else if (btnid === "neg") {
       handleToggleSign();
+    } else if (btnid === "inv") {
+      handleInverse();
     }
   };
 
