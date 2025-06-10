@@ -14,6 +14,7 @@ export default function App() {
   const [curr, setCurr] = useState(0);
   const [resetDisplay, setResetDisplay] = useState(false);
   const [prevBtnId, setPrevBtnId] = useState<string | null>(null);
+  const [toggleFirst, setToggleFirst] = useState(true); // flag for setting proper subtitles
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -126,7 +127,7 @@ export default function App() {
       setOp(btnid);
       setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
       setResetDisplay(true);
-    } else if ([...DIGITS, "."].includes(prevBtnId)) {
+    } else if ([...DIGITS, ".", "neg"].includes(prevBtnId)) {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
@@ -144,23 +145,17 @@ export default function App() {
     setPrevBtnId(btnid);
   };
 
-  // const handleToggleSign = () => {
-  //   if (!prevBtnId || [...DIGITS, "."].includes(prevBtnId)) {
-  //     if (title === "0") return;
-  //     setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-  //   } else if (prevBtnId === "eq") {
-  //     setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-  //     setSubtitle(`negate( ${subtitle} )`);
-  //   }
-  // };
-
   const handleEqual = () => {
     if (prevBtnId === null || prev === null || op === null) {
       setTitle(Number(title).toString());
       setSubtitle(Number(title).toString() + " = ");
       setCurr(Number(title));
       setResetDisplay(true);
-    } else if (OPERATORS.includes(prevBtnId as string) || prevBtnId === "eq") {
+    } else if (
+      OPERATORS.includes(prevBtnId as string) ||
+      prevBtnId === "eq" ||
+      prevBtnId === "neg"
+    ) {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
@@ -168,13 +163,18 @@ export default function App() {
         setTitle("Cannot divide by zero");
       } else {
         setTitle(getPrecision(res).toString());
-        setSubtitle(
-          `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
-        );
+        if (/.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
+          // matches sequence ...( ... ) but it should not contain = sign
+          setSubtitle(`${subtitle} = `);
+        } else {
+          setSubtitle(
+            `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
+          );
+        }
         setPrev(res);
         setResetDisplay(true);
       }
-    } else if ([...DIGITS, "."].includes(prevBtnId)) {
+    } else if ([...DIGITS, "."].includes(prevBtnId) || prevBtnId === "neg") {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
@@ -189,6 +189,29 @@ export default function App() {
       }
     }
     setPrevBtnId("eq");
+    setToggleFirst(true);
+  };
+
+  const handleToggleSign = () => {
+    if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
+      if (title === "0") return;
+    } else if (prevBtnId === "eq") {
+      setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
+    } else if (prevBtnId === "neg") {
+      const splitSub = subtitle.split(" ");
+      if (splitSub.length === 3) {
+        setSubtitle(`negate ( ${subtitle} )`);
+      } else if (splitSub.length >= 5) {
+        const [a, b, ...c] = splitSub;
+        setSubtitle(`${a} ${b} negate( ${c.join(" ")} )`);
+      }
+    } else if (OPERATORS.includes(prevBtnId)) {
+      setSubtitle(`${subtitle}negate( ${title} )`);
+    }
+    setTitle(title.includes("-") ? title.slice(1) : "-" + title);
+    setCurr(-1 * curr);
+    setToggleFirst(false);
+    setPrevBtnId("neg");
   };
 
   const processInput = (btnid: string) => {
@@ -206,9 +229,9 @@ export default function App() {
       handleBackspace();
     } else if (OPERATORS.includes(btnid)) {
       handleOperator(btnid);
+    } else if (btnid === "neg") {
+      handleToggleSign();
     }
-    // } else if (btnid === "neg") {
-    //   handleToggleSign();
   };
 
   return (
