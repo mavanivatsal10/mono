@@ -52,6 +52,7 @@ export default function App() {
     setCurr(0);
     setResetDisplay(true);
     setPrevBtnId(null);
+    setToggleFirst(true);
   };
 
   const handleClearEntry = () => {
@@ -108,6 +109,9 @@ export default function App() {
   };
 
   const handleOperator = (btnid: string) => {
+    /** TESTS
+     *
+     */
     if (prevBtnId === "eq") {
       setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
       setPrev(Number(title));
@@ -116,8 +120,20 @@ export default function App() {
       setResetDisplay(true);
       setPrevBtnId(btnid);
     } else if (prevBtnId === null || prev === null || op === null) {
+      if (
+        // prev === null and op === null
+        prevBtnId !== null &&
+        ["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)
+      ) {
+        // if (/.+ = $/.test(subtitle)) {
+        setSubtitle(`${getPrecision(title)} ${getSymbol(btnid)} `);
+        // } else {
+        //   setSubtitle(`${subtitle} ${getSymbol(btnid)} `);
+        // }
+      } else {
+        setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
+      }
       setTitle(Number(title).toString());
-      setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
       setPrev(Number(title));
       setOp(btnid);
       setCurr(Number(title));
@@ -126,7 +142,9 @@ export default function App() {
       setOp(btnid);
       setSubtitle(Number(title).toString() + " " + getSymbol(btnid) + " ");
       setResetDisplay(true);
-    } else if ([...DIGITS, ".", "neg"].includes(prevBtnId)) {
+    } else if (
+      ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
+    ) {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
       if (res === null) {
@@ -142,28 +160,59 @@ export default function App() {
       }
     }
     setPrevBtnId(btnid);
+    setToggleFirst(true); // remove if bugs
   };
 
   const handleEqual = () => {
-    if (/^.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
-      // matches sequence ...( ... )
-      setSubtitle(`${subtitle} = `);
-      if (prev !== null && op !== null) {
-        const res = compute(prev, op, curr);
-        if (res === null) {
-          handleClear();
-          setTitle("Cannot divide by zero");
-        } else {
-          setTitle(getPrecision(res).toString());
-          setPrev(res);
-          setResetDisplay(true);
-        }
+    // if (/^.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
+    //   // matches sequence ...( ... )
+    //   setSubtitle(`${subtitle} = `);
+    //   if (prev !== null && op !== null) {
+    //     const res = compute(prev, op, curr);
+    //     if (res === null) {
+    //       handleClear();
+    //       setTitle("Cannot divide by zero");
+    //     } else {
+    //       setTitle(getPrecision(res).toString());
+    //       setCurr(res); // possible bug
+    //       setPrev(res); // possible bug
+    //       setResetDisplay(true);
+    //     }
+    //   }
+    // } else
+    if (prevBtnId === null || prev === null || op === null) {
+      if (/.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
+        setSubtitle(`${subtitle} = `);
+      } else {
+        setSubtitle(Number(title).toString() + " = ");
       }
-    } else if (prevBtnId === null || prev === null || op === null) {
       setTitle(Number(title).toString());
-      setSubtitle(Number(title).toString() + " = ");
       setCurr(Number(title));
       setResetDisplay(true);
+    } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId as string)) {
+      const res = compute(prev, op, curr);
+      if (res === null) {
+        handleClear();
+        setTitle("Cannot divide by zero");
+      } else {
+        setTitle(getPrecision(res).toString());
+        // possible bug
+        // if (subtitle of the form ( ... ) + ( ... ) then )
+        // setSubtitle(`${subtitle} = `);
+        // else   `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
+        if (
+          /.+\( .+ \) (\+|-|×|÷) .+\( .+ \)/.test(subtitle) &&
+          !/.+ = $/.test(subtitle)
+        ) {
+          setSubtitle(`${subtitle} = `);
+        } else {
+          setSubtitle(
+            `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
+          );
+        }
+        setPrev(res);
+        setResetDisplay(true);
+      }
     } else if (OPERATORS.includes(prevBtnId as string) || prevBtnId === "eq") {
       // we have prev and op set to non-null value
       const res = compute(prev, op, curr);
@@ -197,17 +246,28 @@ export default function App() {
   };
 
   const handleToggleSign = () => {
-    if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
+    /** TESTS
+     * neg
+     * 3 plus 2 neg eq eq
+     * 5 . eq neg neg neg plus neg neg eq eq
+     * 5 eq . neg neg neg
+     */
+    if (
+      prevBtnId === null ||
+      [...DIGITS, "."].includes(prevBtnId) ||
+      (prevBtnId === "neg" && subtitle.endsWith(" = "))
+    ) {
       if (title === "0") return;
     } else if (prevBtnId === "eq") {
       setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
     } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
-      const splitSub = subtitle.split(" ");
-      if (splitSub.length === 3) {
-        setSubtitle(`negate( ${subtitle} )`);
-      } else if (splitSub.length >= 5) {
-        const [a, b, ...c] = splitSub;
-        setSubtitle(`${a} ${b} negate( ${c.join(" ")} )`);
+      const parts = subtitle.split(/ (\+|-|×|÷) /);
+      if (parts.length === 1) {
+        setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
+      } else {
+        setSubtitle(
+          `${parts[0]} ${parts[1]} negate( ${toggleFirst ? title : parts[2]} )`
+        );
       }
     } else if (OPERATORS.includes(prevBtnId)) {
       setSubtitle(`${subtitle}negate( ${title} )`);
@@ -219,22 +279,42 @@ export default function App() {
   };
 
   const handleInverse = () => {
+    /** TESTS
+     * inv
+     * C inv
+     * CE inv
+     * 8 inv neg inv eq
+     * 8 minus neg inv eq eq
+     * 3 plus 2 inv neg eq eq
+     * 5 eq inv neg inv eq eq
+     * . neg 8 inv eq
+     * 2 neg plus inv mult div eq eq eq eq
+     * 2 mult neg inv plus eq
+     * 2 minus 5 inv inv neg eq
+     * 5 inv div 2 inv inv inv eq eq eq
+     */
     if (title === "0") {
       handleClear();
       setTitle("Cannot divide by zero");
-    } else if (
-      prevBtnId === "eq" ||
-      prevBtnId === null ||
-      [...DIGITS, "."].includes(prevBtnId)
-    ) {
+      return;
+    } else if (prevBtnId === "eq" || prevBtnId === null) {
       setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
-    } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
-      const splitSub = subtitle.split(" ");
-      if (splitSub.length === 3) {
-        setSubtitle(`1/( ${subtitle} )`);
-      } else if (splitSub.length >= 5) {
-        const [a, b, ...c] = splitSub;
-        setSubtitle(`${a} ${b} 1/( ${c.join(" ")} )`);
+      setPrev(null); // remove if bug
+      setOp(null); // remove if bug
+    } else if (
+      ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
+    ) {
+      const parts = subtitle.split(/ (\+|-|×|÷) /);
+      if (parts.length === 1) {
+        if (/.+ = $/.test(subtitle)) {
+          setSubtitle(`1/( ${title} )`);
+        } else {
+          setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
+        }
+      } else {
+        setSubtitle(
+          `${parts[0]} ${parts[1]} 1/( ${toggleFirst ? title : parts[2]} )`
+        );
       }
     } else if (OPERATORS.includes(prevBtnId)) {
       setSubtitle(`${subtitle}1/( ${title} )`);
@@ -244,6 +324,39 @@ export default function App() {
     setToggleFirst(false);
     setPrevBtnId("inv");
   };
+
+  // const handleSquareAndRoot = (btnid: "sqr" | "sqrt") => {
+  //   /** TESTS
+  //    * sqr sqrt sqrt inv
+  //    * 3 sqr sqr plus 256 sqrt sqrt eq sqr
+  //    */
+  //   const prefix = btnid === "sqr" ? "sqr" : "√";
+  //   const val = btnid === "sqr" ? curr ** 2 : Math.sqrt(curr);
+  //   if (prevBtnId === "eq" || prevBtnId === null) {
+  //     setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
+  //     setPrev(null); // remove if bug
+  //     setOp(null); // remove if bug
+  //   } else if (
+  //     ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
+  //   ) {
+  //     const parts = subtitle.split(/ (\+|-|×|÷) /);
+  //     if (parts.length === 1) {
+  //       setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
+  //     } else {
+  //       setSubtitle(
+  //         `${parts[0]} ${parts[1]} ${prefix}( ${
+  //           toggleFirst ? title : parts[2]
+  //         } )`
+  //       );
+  //     }
+  //   } else if (OPERATORS.includes(prevBtnId)) {
+  //     setSubtitle(`${subtitle}${prefix}( ${title} )`);
+  //   }
+  //   setTitle(getPrecision(val).toString());
+  //   setCurr(val);
+  //   setToggleFirst(false);
+  //   setPrevBtnId(btnid);
+  // };
 
   const processInput = (btnid: string) => {
     if (DIGITS.includes(btnid)) {
@@ -264,6 +377,8 @@ export default function App() {
       handleToggleSign();
     } else if (btnid === "inv") {
       handleInverse();
+      // } else if (btnid === "sqr" || btnid === "sqrt") {
+      //   handleSquareAndRoot(btnid);
     }
   };
 
