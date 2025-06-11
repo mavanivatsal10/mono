@@ -61,20 +61,31 @@ export default function App() {
   };
 
   const handleBackspace = () => {
-    if (!prevBtnId || [...DIGITS, ".", "backspace"].includes(prevBtnId)) {
+    /** TESTS
+     * 2 plus neg backspace
+     * 2 plus 2 neg backspace
+     * 2 inv backspace
+     * 8 sqr sqr sqrt backspace
+     * 8 sqr sqr sqrt eq backspace
+     */
+    if (
+      !prevBtnId ||
+      [...DIGITS, "."].includes(prevBtnId) ||
+      (prevBtnId === "neg" && !/.+\( .+ \)/.test(subtitle)) ||
+      (prevBtnId === "backspace" && !/.+\( .+ \)/.test(subtitle))
+    ) {
       if (title.length === 1 || (title.length === 2 && title[0] === "-")) {
         setTitle("0");
       } else {
         setTitle(title.slice(0, -1));
       }
+    } else if (prevBtnId === "eq" && !/.+\( .+ \)/.test(subtitle)) {
+      setSubtitle("");
+      setPrev(null);
+      setOp(null);
+      setResetDisplay(true);
+      setPrevBtnId(null);
     }
-    // } else if (prevBtnId === "eq") {
-    //   setSubtitle("");
-    //   setPrev(null);
-    //   setOp(null);
-    //   setResetDisplay(true);
-    //   setPrevBtnId(null);
-    // }
     setPrevBtnId("backspace");
   };
 
