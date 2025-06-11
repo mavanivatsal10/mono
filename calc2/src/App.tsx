@@ -1,6 +1,7 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Button from "./components/Button";
+import { set } from "react-hook-form";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const OPERATORS = ["+", "-", "*", "/"];
@@ -22,6 +23,14 @@ export default function App() {
       handleClear();
       setTitle(btnid);
       setCurr(Number(btnid));
+    } else if (prevBtnId === "percent") {
+      const parts = subtitle.split(/ (\+|-|×|÷) /);
+      if (parts.length > 1) {
+        setTitle(btnid);
+        setSubtitle(`${parts[0]} ${parts[1]} `);
+        setCurr(Number(btnid));
+        setResetDisplay(false);
+      }
     } else if (!prevBtnId || resetDisplay || title === "0") {
       setTitle(btnid);
       setCurr(Number(btnid));
@@ -251,6 +260,19 @@ export default function App() {
         );
         setPrev(res);
       }
+    } else if (prevBtnId === "percent") {
+      const res = compute(prev, op, curr);
+      if (res === null) {
+        handleClear();
+        setTitle("Cannot divide by zero");
+        return;
+      }
+      setTitle(getPrecision(res).toString());
+      setSubtitle(
+        `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
+      );
+      setPrev(res);
+      setResetDisplay(true);
     }
     setPrevBtnId("eq");
     setToggleFirst(true);
@@ -339,7 +361,7 @@ export default function App() {
   const handleSquareAndRoot = (btnid: "sqr" | "sqrt") => {
     /** TESTS
      * sqr sqrt sqrt inv
-     * 3 sqr sqr plus 256 sqrt sqrt eq sqr
+     * 3 sqr sqr plus 256 sqrt sqrt eq sqr // failing test
      */
     const prefix = btnid === "sqr" ? "sqr" : "√";
     const val = btnid === "sqr" ? curr * curr : Math.sqrt(curr);
@@ -369,6 +391,46 @@ export default function App() {
     setPrevBtnId(btnid);
   };
 
+  const handlePercent = () => {
+    /** TESTS
+     * 500 percent
+     * 500 plus percent percent percent eq eq eq
+     * 500 plus 50 percent 5 eq
+     * 500 mult percent eq
+     * 500 div percent percent percent eq eq eq
+     */
+    if (prevBtnId === null || prev === null || op === null) {
+      handleClear();
+      setSubtitle("0");
+    } else if (prevBtnId === "percent") {
+      const splitSub = subtitle.split(/ (\+|-|×|÷) /);
+      if (splitSub.length > 1) {
+        const res = op === "+" || op === "-" ? (curr / 100) * prev : curr / 100;
+        setSubtitle(`${splitSub[0]} ${splitSub[1]} ${res}`);
+        setTitle(getPrecision(res).toString());
+        // setPrev(res); // possible bug
+        setCurr(res);
+        setResetDisplay(true);
+        setPrevBtnId("percent");
+      }
+    } else if (prev !== null && (op === "+" || op === "-")) {
+      const res = (curr / 100) * prev;
+      setTitle(getPrecision(res).toString());
+      setSubtitle(`${subtitle}${getPrecision(res).toString()}`);
+      setCurr(res);
+      setResetDisplay(true);
+      setPrevBtnId("percent");
+    } else if (prev !== null && (op === "*" || op === "/")) {
+      console.log("here");
+      const res = curr / 100;
+      setTitle(getPrecision(res).toString());
+      setSubtitle(`${subtitle}${getPrecision(res).toString()}`);
+      setCurr(res);
+      setResetDisplay(true);
+      setPrevBtnId("percent");
+    }
+  };
+
   const processInput = (btnid: string) => {
     if (DIGITS.includes(btnid)) {
       handleDigit(btnid);
@@ -390,6 +452,8 @@ export default function App() {
       handleInverse();
     } else if (btnid === "sqr" || btnid === "sqrt") {
       handleSquareAndRoot(btnid);
+    } else if (btnid === "percent") {
+      handlePercent();
     }
   };
 
