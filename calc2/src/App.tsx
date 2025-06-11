@@ -1,5 +1,5 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "./components/Button";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -61,7 +61,7 @@ export default function App() {
   };
 
   const handleBackspace = () => {
-    if (!prevBtnId || [...DIGITS, ".", "neg"].includes(prevBtnId)) {
+    if (!prevBtnId || [...DIGITS, ".", "backspace"].includes(prevBtnId)) {
       if (title.length === 1 || (title.length === 2 && title[0] === "-")) {
         setTitle("0");
       } else {
@@ -325,38 +325,38 @@ export default function App() {
     setPrevBtnId("inv");
   };
 
-  // const handleSquareAndRoot = (btnid: "sqr" | "sqrt") => {
-  //   /** TESTS
-  //    * sqr sqrt sqrt inv
-  //    * 3 sqr sqr plus 256 sqrt sqrt eq sqr
-  //    */
-  //   const prefix = btnid === "sqr" ? "sqr" : "√";
-  //   const val = btnid === "sqr" ? curr ** 2 : Math.sqrt(curr);
-  //   if (prevBtnId === "eq" || prevBtnId === null) {
-  //     setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
-  //     setPrev(null); // remove if bug
-  //     setOp(null); // remove if bug
-  //   } else if (
-  //     ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
-  //   ) {
-  //     const parts = subtitle.split(/ (\+|-|×|÷) /);
-  //     if (parts.length === 1) {
-  //       setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
-  //     } else {
-  //       setSubtitle(
-  //         `${parts[0]} ${parts[1]} ${prefix}( ${
-  //           toggleFirst ? title : parts[2]
-  //         } )`
-  //       );
-  //     }
-  //   } else if (OPERATORS.includes(prevBtnId)) {
-  //     setSubtitle(`${subtitle}${prefix}( ${title} )`);
-  //   }
-  //   setTitle(getPrecision(val).toString());
-  //   setCurr(val);
-  //   setToggleFirst(false);
-  //   setPrevBtnId(btnid);
-  // };
+  const handleSquareAndRoot = (btnid: "sqr" | "sqrt") => {
+    /** TESTS
+     * sqr sqrt sqrt inv
+     * 3 sqr sqr plus 256 sqrt sqrt eq sqr
+     */
+    const prefix = btnid === "sqr" ? "sqr" : "√";
+    const val = btnid === "sqr" ? curr * curr : Math.sqrt(curr);
+    if (prevBtnId === "eq" || prevBtnId === null) {
+      setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
+      setPrev(null); // remove if bug
+      setOp(null); // remove if bug
+    } else if (
+      ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
+    ) {
+      const parts = subtitle.split(/ (\+|-|×|÷) /);
+      if (parts.length === 1) {
+        setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
+      } else {
+        setSubtitle(
+          `${parts[0]} ${parts[1]} ${prefix}( ${
+            toggleFirst ? title : parts[2]
+          } )`
+        );
+      }
+    } else if (OPERATORS.includes(prevBtnId)) {
+      setSubtitle(`${subtitle}${prefix}( ${title} )`);
+    }
+    setTitle(getPrecision(val).toString());
+    setCurr(val);
+    setToggleFirst(false);
+    setPrevBtnId(btnid);
+  };
 
   const processInput = (btnid: string) => {
     if (DIGITS.includes(btnid)) {
@@ -377,10 +377,57 @@ export default function App() {
       handleToggleSign();
     } else if (btnid === "inv") {
       handleInverse();
-      // } else if (btnid === "sqr" || btnid === "sqrt") {
-      //   handleSquareAndRoot(btnid);
+    } else if (btnid === "sqr" || btnid === "sqrt") {
+      handleSquareAndRoot(btnid);
     }
   };
+
+  const buttonRefs = useRef({});
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement &&
+        typeof document.activeElement.blur === "function"
+      ) {
+        document.activeElement.blur();
+      }
+
+      if (
+        [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "0",
+          "+",
+          "-",
+          "*",
+          "/",
+        ].includes(e.key)
+      ) {
+        buttonRefs.current[e.key]?.click();
+      } else if (e.key === "Enter") {
+        buttonRefs.current["eq"]?.click();
+      } else if (e.key === "Backspace") {
+        buttonRefs.current["backspace"]?.click();
+      } else if (e.key === ".") {
+        buttonRefs.current["."]?.click();
+      } else if (e.key === "%") {
+        buttonRefs.current["percent"]?.click();
+      } else if (e.key === "Escape" || e.key === " ") {
+        buttonRefs.current["c"]?.click();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [buttonRefs]);
 
   return (
     <div className="flex items-center justify-center bg-gray-100 h-screen gap-8">
@@ -535,7 +582,7 @@ export default function App() {
               displayVal={displayVal}
               onClick={() => processInput(btnid)}
               variant={variant as "dark" | "light" | "orange"}
-              // ref={(e) => (buttonRefs.current[input.val] = e)}
+              ref={(e) => (buttonRefs.current[btnid] = e)}
               key={btnid}
             />
           ))}
