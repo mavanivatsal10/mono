@@ -1,257 +1,16 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
 import Button from "./components/Button";
-import { set } from "react-hook-form";
-
-const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const OPERATORS = ["+", "-", "*", "/"];
+import { useHandlers } from "./hooks/useHandlers";
 
 export default function App() {
-  const [title, setTitle] = useState("0"); // show result
-  const [subtitle, setSubtitle] = useState(""); // show expression (a + b =)
-  const [prev, setPrev] = useState<number | null>(null); // first operand
-  const [op, setOp] = useState<string | null>(null); // operator
-  const [curr, setCurr] = useState(0);
-  const [resetDisplay, setResetDisplay] = useState(false);
-  const [prevBtnId, setPrevBtnId] = useState<string | null>(null);
-  const [toggleFirst, setToggleFirst] = useState(false);
-  const [history, setHistory] = useState<string[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-
-  const handleDigit = (btnid: string) => {
-    if (prevBtnId === "eq") {
-      handleClear();
-      setTitle(btnid);
-      setCurr(Number(btnid));
-    } else if (prevBtnId === null || resetDisplay || title === "0") {
-      setTitle(btnid);
-      setCurr(Number(btnid));
-      setResetDisplay(false);
-    } else {
-      setTitle(title + btnid);
-      setCurr(Number(title + btnid));
-    }
-    setToggleFirst(true);
-    setPrevBtnId(btnid);
-  };
-
-  const handleDecimal = () => {
-    if (!prevBtnId || resetDisplay || title === "0" || title === "") {
-      setTitle("0.");
-      setCurr(0);
-      setResetDisplay(false);
-    } else if (!title.includes(".")) {
-      setTitle(title + ".");
-    } else if (prevBtnId === "eq") {
-      handleClear();
-      setTitle("0.");
-      setCurr(0);
-    }
-    setPrevBtnId(".");
-  };
-
-  const handleClear = () => {
-    setTitle("0");
-    setSubtitle("");
-    setPrev(null);
-    setOp(null);
-    setCurr(0);
-    setResetDisplay(true);
-    setPrevBtnId(null);
-  };
-
-  const handleClearEntry = () => {
-    setTitle("0");
-    setCurr(0);
-  };
-
-  // const handleBackspace = () => {
-  //   if (!prevBtnId || [...DIGITS, ".", "neg"].includes(prevBtnId)) {
-  //     if (title.length === 1 || (title.length === 2 && title[0] === "-")) {
-  //       setTitle("0");
-  //     } else {
-  //       setTitle(title.slice(0, -1));
-  //     }
-  //   }
-  //   // } else if (prevBtnId === "eq") {
-  //   //   setSubtitle("");
-  //   //   setPrev(null);
-  //   //   setOp(null);
-  //   //   setResetDisplay(true);
-  //   //   setPrevBtnId(null);
-  //   // }
-  //   setPrevBtnId("backspace");
-  // };
-
-  const getSymbol = (operator: string) => {
-    if (operator === "+" || operator === "-") return operator;
-    else if (operator === "*") return "×";
-    else if (operator === "/") return "÷";
-  };
-
-  const compute = (a: number | null, op: string | null, b: number) => {
-    let res = null;
-    if (a === null || op === null) return null;
-
-    if (op === "+") res = a + b;
-    else if (op === "-") res = a - b;
-    else if (op === "*") res = a * b;
-    else if (op === "/") {
-      if (b === 0) return null;
-      res = a / b;
-    }
-
-    return res;
-  };
-
-  const getPrecision = (num: number | string) => {
-    if (typeof num === "string") {
-      num = Number(num);
-      return Number(num.toFixed(12)).toString();
-    } else {
-      return Number(num.toFixed(12));
-    }
-  };
-
-  const handleOperator = (btnid: string) => {
-    const symbol = getSymbol(btnid);
-    const val = Number(title);
-    if (prevBtnId === "eq") {
-      setSubtitle(val.toString() + " " + symbol + " ");
-      setPrev(val);
-      setCurr(val);
-      setPrevBtnId(btnid);
-    } else if (prevBtnId === null || prev === null || op === null) {
-      setTitle(val.toString());
-      setSubtitle(val.toString() + " " + symbol + " ");
-      setPrev(val);
-      setCurr(val);
-    } else if (OPERATORS.includes(prevBtnId)) {
-      setSubtitle(val.toString() + " " + symbol + " ");
-    } else if ([...DIGITS, "."].includes(prevBtnId)) {
-      // we have prev and op set to non-null value
-      const res = compute(prev, op, curr);
-      if (res === null) {
-        handleClear();
-        setTitle("Cannot divide by zero");
-        return;
-      } else {
-        setTitle(getPrecision(res).toString());
-        setCurr(res);
-        setSubtitle(getPrecision(res) + " " + symbol + " ");
-        setPrev(res);
-      }
-    }
-    setOp(btnid);
-    setResetDisplay(true);
-    setPrevBtnId(btnid);
-    setToggleFirst(true);
-  };
-
-  const handleEqual = () => {
-    if (prevBtnId === null || prev === null || op === null) {
-      setTitle(Number(title).toString());
-      setSubtitle(Number(title).toString() + " = ");
-      setCurr(Number(title));
-      setResetDisplay(true);
-    } else if (OPERATORS.includes(prevBtnId as string) || prevBtnId === "eq") {
-      // we have prev and op set to non-null value
-      const res = compute(prev, op, curr);
-      if (res === null) {
-        handleClear();
-        setTitle("Cannot divide by zero");
-        return;
-      } else if (subtitle.split(" ").length >= 5 && subtitle.includes("(")) {
-        setSubtitle(subtitle + " = ");
-      } else {
-        setSubtitle(
-          `${getPrecision(title)} ${getSymbol(op)} ${getPrecision(curr)} = `
-        );
-      }
-      setTitle(getPrecision(res).toString());
-      setPrev(res);
-      setResetDisplay(true);
-    } else if ([...DIGITS, "."].includes(prevBtnId)) {
-      // we have prev and op set to non-null value
-      const res = compute(prev, op, curr);
-      if (res === null) {
-        handleClear();
-        setTitle("Cannot divide by zero");
-        return;
-      } else {
-        setTitle(getPrecision(res).toString());
-        setSubtitle(
-          `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
-        );
-        setPrev(res);
-      }
-      // } else if (["neg", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
-      //   console.log(subtitle);
-      //   setSubtitle(`${subtitle} = `);
-    }
-    setPrevBtnId("eq");
-    setToggleFirst(true);
-  };
-
-  const handleToggleSign = () => {
-    if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
-      if (title === "0") return;
-    } else if (["eq", "inv", "sqr", "sqrt"].includes(prevBtnId)) {
-      setSubtitle(`negate( ${toggleFirst ? title : subtitle} )`);
-    } else if (OPERATORS.includes(prevBtnId)) {
-      const splitSub = subtitle.split(" ");
-      if (splitSub.length === 3) {
-        setSubtitle(`${splitSub[0]} ${splitSub[1]} negate( ${title} )`);
-      } else if (splitSub.length >= 5) {
-        const [a, b, ...c] = splitSub;
-        const joinedC = c.join(" ");
-        setSubtitle(`${a} ${b} negate( ${joinedC} )`);
-      }
-    }
-    setTitle(title.includes("-") ? title.slice(1) : "-" + title);
-    setCurr(-1 * curr);
-    setToggleFirst(false);
-  };
-
-  const handleInverse = () => {
-    // if (prevBtnId === null || [...DIGITS, "."].includes(prevBtnId)) {
-    if (curr === 0) {
-      handleClear();
-      setTitle("Cannot divide by zero");
-      return;
-    }
-    setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
-    setTitle(getPrecision(1 / curr).toString());
-    setCurr(1 / curr);
-    // }
-    setPrevBtnId("inv");
-    setToggleFirst(false);
-  };
-
-  const processInput = (btnid: string) => {
-    if (DIGITS.includes(btnid)) {
-      handleDigit(btnid);
-    } else if (btnid === ".") {
-      handleDecimal();
-    } else if (btnid === "c") {
-      handleClear();
-    } else if (btnid === "ce") {
-      handleClearEntry();
-    } else if (OPERATORS.includes(btnid)) {
-      handleOperator(btnid);
-    } else if (btnid === "eq") {
-      handleEqual();
-    } else if (btnid === "neg") {
-      handleToggleSign();
-      // } else if (btnid === "backspace") {
-      //   handleBackspace();
-    } else if (btnid === "inv") {
-      handleInverse();
-    }
-  };
+  const {
+    handlers: { processInput },
+    state: { title, subtitle, showHistory, setShowHistory, history },
+    buttonRefs,
+  } = useHandlers();
 
   return (
-    <div className="flex items-center justify-center bg-gray-100 h-screen gap-8">
+    <div className="flex items-center justify-center bg-gray-100 h-screen gap-8 select-none">
       <div className="bg-gray-900 flex flex-col gap-1 p-4 text-right text-sm w-100">
         <div>
           <button
@@ -292,7 +51,7 @@ export default function App() {
               displayVal: (
                 <div className="text-xl">
                   <span>⅟</span>
-                  <sub>x</sub>
+                  <span>x</span>
                 </div>
               ),
               btnid: "inv",
@@ -403,7 +162,7 @@ export default function App() {
               displayVal={displayVal}
               onClick={() => processInput(btnid)}
               variant={variant as "dark" | "light" | "orange"}
-              // ref={(e) => (buttonRefs.current[input.val] = e)}
+              ref={(e: HTMLButtonElement) => (buttonRefs.current[btnid] = e)}
               key={btnid}
             />
           ))}
@@ -411,11 +170,8 @@ export default function App() {
       </div>
       {showHistory && (
         <div className="bg-white w-100 h-150 p-4 text-gray-800 shadow-md rounded-lg overflow-y-auto">
-          {history.map(([left, right], index) => (
-            <div key={index}>
-              <span>{left}</span>
-              <span>{right}</span>
-            </div>
+          {history.map((s: string, index: number) => (
+            <div key={index}>{s}</div>
           ))}
         </div>
       )}
