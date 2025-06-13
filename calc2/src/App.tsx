@@ -1,7 +1,6 @@
 import { ArrowLeft, Divide, History, Minus, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Button from "./components/Button";
-import { set } from "react-hook-form";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const OPERATORS = ["+", "-", "*", "/"];
@@ -43,13 +42,17 @@ export default function App() {
   };
 
   const handleDecimal = () => {
-    if (!prevBtnId || resetDisplay || title === "0" || title === "") {
+    if (prevBtnId === "eq") {
+      handleClear();
       setTitle("0.");
       setCurr(0);
-      setResetDisplay(false);
+    } else if (!prevBtnId || resetDisplay || title === "0" || title === "") {
+      setTitle("0.");
+      setCurr(0);
     } else if (!title.includes(".")) {
       setTitle(title + ".");
     }
+    setResetDisplay(false);
     setPrevBtnId(".");
   };
 
@@ -65,8 +68,20 @@ export default function App() {
   };
 
   const handleClearEntry = () => {
-    setTitle("0");
-    setCurr(0);
+    if (prevBtnId === "eq") {
+      handleClear();
+    } else {
+      const parts = subtitle.split(/ (\+|-|×|÷) /);
+      if (parts.length === 1) {
+        handleClear();
+      } else if (parts.length > 1) {
+        setTitle("0");
+        setSubtitle(`${parts[0]} ${parts[1]} `);
+        setCurr(0);
+        setResetDisplay(true);
+      }
+    }
+    setPrevBtnId("ce");
   };
 
   const handleBackspace = () => {
@@ -171,6 +186,7 @@ export default function App() {
         handleClear();
         setTitle("Cannot divide by zero");
       } else {
+        setHistory([...history, `${prev} ${getSymbol(op)} ${curr} = ${res}`]);
         setTitle(Number(res.toFixed(12)).toString());
         setCurr(res);
         setSubtitle(getPrecision(res) + " " + getSymbol(btnid) + " ");
@@ -203,6 +219,7 @@ export default function App() {
     if (prevBtnId === null || prev === null || op === null) {
       if (/.+\( .+ \)/.test(subtitle) && !/.+ = $/.test(subtitle)) {
         setSubtitle(`${subtitle} = `);
+        setHistory([...history, `${subtitle} = ${Number(title)}`]);
       } else {
         setSubtitle(Number(title).toString() + " = ");
       }
@@ -225,10 +242,17 @@ export default function App() {
           !/.+ = $/.test(subtitle)
         ) {
           setSubtitle(`${subtitle} = `);
+          setHistory([...history, `${subtitle} = ${res}`]);
         } else {
           setSubtitle(
             `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
           );
+          setHistory([
+            ...history,
+            `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(
+              curr
+            )} = ${res}`,
+          ]);
         }
         setPrev(res);
         setResetDisplay(true);
@@ -244,6 +268,12 @@ export default function App() {
         setSubtitle(
           `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
         );
+        setHistory([
+          ...history,
+          `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(
+            curr
+          )} = ${res}`,
+        ]);
         setPrev(res);
         setResetDisplay(true);
       }
@@ -258,6 +288,12 @@ export default function App() {
         setSubtitle(
           `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
         );
+        setHistory([
+          ...history,
+          `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(
+            curr
+          )} = ${res}`,
+        ]);
         setPrev(res);
       }
     } else if (prevBtnId === "percent") {
@@ -271,6 +307,10 @@ export default function App() {
       setSubtitle(
         `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = `
       );
+      setHistory([
+        ...history,
+        `${getPrecision(prev)} ${getSymbol(op)} ${getPrecision(curr)} = ${res}`,
+      ]);
       setPrev(res);
       setResetDisplay(true);
     }
@@ -319,7 +359,6 @@ export default function App() {
      * 8 inv neg inv eq
      * 8 minus neg inv eq eq
      * 3 plus 2 inv neg eq eq
-     * 5 eq inv neg inv eq eq
      * . neg 8 inv eq
      * 2 neg plus inv mult div eq eq eq eq
      * 2 mult neg inv plus eq
@@ -330,10 +369,20 @@ export default function App() {
       handleClear();
       setTitle("Cannot divide by zero");
       return;
+    } else if (prevBtnId === "eq" && subtitle.endsWith(" = ")) {
+      const res = 1 / Number(title);
+      setTitle(res.toString());
+      setSubtitle(`1/( ${title} )`);
+      setPrev(null);
+      setOp(null);
+      setCurr(res);
+      setToggleFirst(false);
+      setPrevBtnId("inv");
+      return;
     } else if (prevBtnId === "eq" || prevBtnId === null) {
       setSubtitle(`1/( ${toggleFirst ? title : subtitle} )`);
-      setPrev(null); // remove if bug
-      setOp(null); // remove if bug
+      //setPrev(null); // remove if bug
+      //setOp(null); // remove if bug
     } else if (
       ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
     ) {
@@ -354,6 +403,7 @@ export default function App() {
     }
     setTitle(getPrecision(1 / curr).toString());
     setCurr(1 / curr);
+    setResetDisplay(true);
     setToggleFirst(false);
     setPrevBtnId("inv");
   };
@@ -365,10 +415,21 @@ export default function App() {
      */
     const prefix = btnid === "sqr" ? "sqr" : "√";
     const val = btnid === "sqr" ? curr * curr : Math.sqrt(curr);
-    if (prevBtnId === "eq" || prevBtnId === null) {
+    if (prevBtnId === "eq" && toggleFirst) {
+      const val =
+        btnid === "sqr"
+          ? Number(title) * Number(title)
+          : Math.sqrt(Number(title));
+      setTitle(getPrecision(val).toString());
       setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
-      setPrev(null); // remove if bug
-      setOp(null); // remove if bug
+      setCurr(val);
+      setToggleFirst(false);
+      setPrevBtnId(btnid);
+      return;
+    } else if (prevBtnId === null) {
+      setSubtitle(`${prefix}( ${toggleFirst ? title : subtitle} )`);
+      // setPrev(null); // remove if bug
+      // setOp(null); // remove if bug
     } else if (
       ["neg", "inv", "sqr", "sqrt", ...DIGITS, "."].includes(prevBtnId)
     ) {
@@ -384,9 +445,11 @@ export default function App() {
       }
     } else if (OPERATORS.includes(prevBtnId)) {
       setSubtitle(`${subtitle}${prefix}( ${title} )`);
+    } else if ([...DIGITS, "."].includes(prevBtnId)) {
     }
     setTitle(getPrecision(val).toString());
     setCurr(val);
+    setResetDisplay(true);
     setToggleFirst(false);
     setPrevBtnId(btnid);
   };
@@ -402,7 +465,7 @@ export default function App() {
     if (prevBtnId === null || prev === null || op === null) {
       handleClear();
       setSubtitle("0");
-    } else if (prevBtnId === "percent") {
+    } else if (["neg", "inv", "sqr", "sqrt", "percent"].includes(prevBtnId)) {
       const splitSub = subtitle.split(/ (\+|-|×|÷) /);
       if (splitSub.length > 1) {
         const res = op === "+" || op === "-" ? (curr / 100) * prev : curr / 100;
@@ -421,7 +484,6 @@ export default function App() {
       setResetDisplay(true);
       setPrevBtnId("percent");
     } else if (prev !== null && (op === "*" || op === "/")) {
-      console.log("here");
       const res = curr / 100;
       setTitle(getPrecision(res).toString());
       setSubtitle(`${subtitle}${getPrecision(res).toString()}`);
@@ -457,12 +519,12 @@ export default function App() {
     }
   };
 
-  const buttonRefs = useRef({});
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement }>({});
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
-        document.activeElement &&
+        document.activeElement instanceof HTMLElement &&
         typeof document.activeElement.blur === "function"
       ) {
         document.activeElement.blur();
@@ -505,7 +567,7 @@ export default function App() {
   }, [buttonRefs]);
 
   return (
-    <div className="flex items-center justify-center bg-gray-100 h-screen gap-8">
+    <div className="flex items-center justify-center bg-gray-100 h-screen gap-8 select-none">
       <div className="bg-gray-900 flex flex-col gap-1 p-4 text-right text-sm w-100">
         <div>
           <button
@@ -546,7 +608,7 @@ export default function App() {
               displayVal: (
                 <div className="text-xl">
                   <span>⅟</span>
-                  <sub>x</sub>
+                  <span>x</span>
                 </div>
               ),
               btnid: "inv",
@@ -657,7 +719,7 @@ export default function App() {
               displayVal={displayVal}
               onClick={() => processInput(btnid)}
               variant={variant as "dark" | "light" | "orange"}
-              ref={(e) => (buttonRefs.current[btnid] = e)}
+              ref={(e: HTMLButtonElement) => (buttonRefs.current[btnid] = e)}
               key={btnid}
             />
           ))}
@@ -665,11 +727,8 @@ export default function App() {
       </div>
       {showHistory && (
         <div className="bg-white w-100 h-150 p-4 text-gray-800 shadow-md rounded-lg overflow-y-auto">
-          {history.map(([left, right], index) => (
-            <div key={index}>
-              <span>{left}</span>
-              <span>{right}</span>
-            </div>
+          {history.map((s, index) => (
+            <div key={index}>{s}</div>
           ))}
         </div>
       )}
