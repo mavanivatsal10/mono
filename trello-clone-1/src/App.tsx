@@ -1,3 +1,9 @@
+import ProjectBoard from "./Pages/ProjectBoard";
+
 export default function App() {
-  return <div></div>;
+  return (
+    <div>
+      <ProjectBoard />
+    </div>
+  );
 }
