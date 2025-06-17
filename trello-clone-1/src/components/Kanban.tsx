@@ -1,4 +1,12 @@
-import { DndContext, type DragOverEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragOverEvent,
+} from "@dnd-kit/core";
 import { useState } from "react";
 import Column from "./Column";
 
@@ -8,6 +16,15 @@ export default function Kanban() {
     inProgress: ["task 3", "task 4"],
     done: ["task 5", "task 6"],
   });
+
+  const getSensors = () => {
+    const mouseSensor = useSensor(MouseSensor, {
+      activationConstraint: { distance: 2 },
+    });
+    const touchSensor = useSensor(TouchSensor);
+    const keyboardSensor = useSensor(KeyboardSensor);
+    return [mouseSensor, touchSensor, keyboardSensor];
+  };
 
   const handleDragOver = (e: DragOverEvent) => {
     if (
@@ -62,10 +79,18 @@ export default function Kanban() {
 
   return (
     <div>
-      <DndContext onDragOver={handleDragOver}>
+      <DndContext
+        onDragOver={handleDragOver}
+        sensors={useSensors(...getSensors())}
+      >
         <div className="flex gap-4">
           {Object.entries(columns).map(([columnId, column]) => (
-            <Column key={columnId} title={columnId} cards={column} />
+            <Column
+              key={columnId}
+              title={columnId}
+              cards={column}
+              setColumns={setColumns}
+            />
           ))}
         </div>
       </DndContext>
