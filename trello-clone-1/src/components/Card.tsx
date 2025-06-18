@@ -1,15 +1,19 @@
+import Bin from "@/icons/Bin";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useRef, useState } from "react";
+import CardDetails from "./CardDetails";
 
-export default function Card({ card, parent, setColumns }) {
-  const [edit, setEdit] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [inputVal, setInputVal] = useState(card);
+interface Props {
+  card: any;
+  parent: string;
+  setColumns: any;
+}
 
+export default function Card({ card, parent, setColumns, onClick }: Props) {
   const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
-    id: `droppable-card-${card}`,
-    data: { type: `droppable-card-${card}`, card, parent },
+    id: `droppable-card-${card.id}`,
+    data: { type: `droppable-card-${card.id}`, card, parent },
   });
 
   const {
@@ -17,24 +21,28 @@ export default function Card({ card, parent, setColumns }) {
     listeners,
     setNodeRef: setDraggableNodeRef,
     transform,
+    isDragging,
   } = useDraggable({
-    id: `draggable-card-${card}`,
-    data: { type: `draggable-card-${card}`, card, parent },
+    id: `draggable-card-${card.id}`,
+    data: { type: `draggable-card-${card.id}`, card, parent },
   });
 
   const setRef = (el: HTMLElement | null) => {
     setDraggableNodeRef(el);
     setDroppableNodeRef(el);
-    cardRef.current = el;
   };
 
   const style = {
     transform: CSS.Translate.toString(transform),
   };
 
-  useEffect(() => {
-    // document.addEvenListener: when mouse clicks outside or enter is pressed, setEdit(false)
-  }, []);
+  const removeCard = () => {
+    setColumns((prev) => {
+      const temp = { ...prev };
+      temp[parent] = temp[parent].filter((c) => c.id !== card.id);
+      return temp;
+    });
+  };
 
   return (
     <div
@@ -42,17 +50,21 @@ export default function Card({ card, parent, setColumns }) {
       {...listeners}
       {...attributes}
       style={style}
-      className="m-2 p-4 border-2 bg-white rounded-md shadow-md"
+      className={`m-2 p-4 border-2 bg-white rounded-md shadow-md relative group ${
+        isDragging ? "z-40" : ""
+      }`}
+      onClick={onClick}
     >
-      {edit ? (
-        <input
-          type="text"
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-        />
-      ) : (
-        <p onClick={() => setEdit(true)}>{card}</p>
-      )}
+      <p className="break-words pr-4 line-clamp-5">{card.title}</p>
+      <button
+        className="absolute top-1/2 right-2 -translate-y-1/2 group-hover:opacity-75 opacity-0"
+        onClick={(e) => {
+          e.stopPropagation();
+          removeCard();
+        }}
+      >
+        {!isDragging && <Bin />}
+      </button>
     </div>
   );
 }
