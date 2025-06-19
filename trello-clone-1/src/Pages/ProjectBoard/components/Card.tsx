@@ -1,8 +1,7 @@
 import Bin from "@/icons/Bin";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, useState } from "react";
-import CardDetails from "./CardDetails";
+import deepcopy from "deepcopy";
 
 interface Props {
   card: any;
@@ -38,7 +37,7 @@ export default function Card({ card, parent, setColumns, onClick }: Props) {
 
   const removeCard = () => {
     setColumns((prev) => {
-      const temp = { ...prev };
+      const temp = deepcopy(prev);
       temp[parent] = temp[parent].filter((c) => c.id !== card.id);
       return temp;
     });
@@ -51,13 +50,13 @@ export default function Card({ card, parent, setColumns, onClick }: Props) {
       {...attributes}
       style={style}
       className={`m-2 p-4 border-2 bg-white rounded-md shadow-md relative group ${
-        isDragging ? "z-40" : ""
+        isDragging ? "z-40 cursor-grabbing" : "cursor-grab"
       }`}
       onClick={onClick}
     >
       <p className="break-words pr-4 line-clamp-5">{card.title}</p>
       <button
-        className="absolute top-1/2 right-2 -translate-y-1/2 group-hover:opacity-75 opacity-0"
+        className="absolute top-1/2 right-2 -translate-y-1/2 group-hover:opacity-75 opacity-0 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
           removeCard();

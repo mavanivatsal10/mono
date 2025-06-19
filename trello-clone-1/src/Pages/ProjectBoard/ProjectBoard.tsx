@@ -1,13 +1,13 @@
-import CardDetails from "@/components/CardDetails";
-import Kanban from "@/components/Kanban";
+import CardDetails from "@/Pages/ProjectBoard/components/CardDetails";
+import Kanban from "@/Pages/ProjectBoard/components/Kanban";
+import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
 import type { projectDetailsType } from "@/types";
-import { useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 export default function ProjectBoard({ data }: { data: projectDetailsType }) {
-  // these states can be lifted to a context
-  const [showOverlay, setShowOverlay] = useState(false);
-  const [selectedCard, setSelectedCard] = useState(null);
+  const { showOverlay, setShowOverlay, selectedCard, setSelectedCard } =
+    useContext(ProjectBoardContext);
 
   const [columns, setColumns] = useState({
     todo: [
@@ -62,29 +62,10 @@ export default function ProjectBoard({ data }: { data: projectDetailsType }) {
     ],
   });
 
-  useEffect(() => {
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setShowOverlay(false);
-        setSelectedCard(null);
-      }
-    };
-
-    document.addEventListener("keydown", handleEscapeKey);
-
-    return () => document.removeEventListener("keydown", handleEscapeKey);
-  }, []);
-
   return (
     <div>
       <div className={`${showOverlay ? "blur-sm opacity-75" : ""}`}>
-        <Kanban
-          setShowOverlay={setShowOverlay}
-          showOverlay={showOverlay}
-          setSelectedCard={setSelectedCard}
-          columns={columns}
-          setColumns={setColumns}
-        />
+        <Kanban columns={columns} setColumns={setColumns} />
       </div>
       {showOverlay && (
         <CardDetails

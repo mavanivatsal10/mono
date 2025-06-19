@@ -7,18 +7,11 @@ import {
   useSensors,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import { useState } from "react";
 import Column from "./Column";
-import { v4 as uuidv4 } from "uuid";
 import deepcopy from "deepcopy";
+import Filter from "./Filter";
 
-export default function Kanban({
-  setShowOverlay,
-  showOverlay,
-  setSelectedCard,
-  columns,
-  setColumns,
-}) {
+export default function Kanban({ columns, setColumns }) {
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: { distance: 2 },
   });
@@ -87,18 +80,16 @@ export default function Kanban({
   };
 
   return (
-    <div className="m-4">
+    <div className="m-4 sleect-none">
+      <Filter columns={columns} setColumns={setColumns} />
       <DndContext onDragOver={handleDragOver} sensors={sensors}>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Object.entries(columns).map(([columnId, column]) => (
             <Column
               key={columnId}
               title={columnId}
               cards={column}
               setColumns={setColumns}
-              showOverlay={showOverlay}
-              setShowOverlay={setShowOverlay}
-              setSelectedCard={setSelectedCard}
             />
           ))}
         </div>

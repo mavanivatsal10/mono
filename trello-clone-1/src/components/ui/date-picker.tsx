@@ -9,14 +9,17 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function DatePicker({ date, setDate, ref }) {
+export function DatePicker({ date, setDate, ref, className = "" }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           data-empty={!date}
-          className="data-[empty=true]:text-muted-foreground justify-start text-left font-normal"
+          className={
+            "data-[empty=true]:text-muted-foreground justify-start text-left font-normal outline-none transition-[color,box-shadow] shadow-xs" +
+            className
+          }
         >
           <CalendarIcon />
           {date ? format(date, "PPP") : <span>Pick a date</span>}
