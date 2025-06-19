@@ -33,14 +33,25 @@ export default function Column({ title, cards, setColumns }) {
 
   const filteredCards = cards.filter((card) => {
     if (filter === "all") return true;
-    else if (filter === "today") {
+    else if (filter === "overdue") {
+      return card.endDate <= addDays(new Date(), -1);
+    } else if (filter === "today") {
       return card.endDate <= new Date();
     } else if (filter === "tomorrow") {
-      return card.endDate <= addDays(new Date(), 1);
+      return (
+        card.endDate >= addDays(new Date(), -1) &&
+        card.endDate <= addDays(new Date(), 1)
+      );
     } else if (filter === "week") {
-      return card.endDate <= addDays(new Date(), 7);
+      return (
+        card.endDate >= addDays(new Date(), -1) &&
+        card.endDate <= addDays(new Date(), 7)
+      );
     } else if (filter === "month") {
-      return card.endDate <= addDays(new Date(), 30);
+      return (
+        card.endDate >= addDays(new Date(), -1) &&
+        card.endDate <= addDays(new Date(), 30)
+      );
     } else return true; // Default case, return all cards
   });
 

@@ -1,11 +1,12 @@
 import Header from "./components/Header";
-import ProjectBoard from "./Pages/ProjectBoard/ProjectBoard";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import ProjectBoard from "./pages/ProjectBoard/ProjectBoard";
 
 export default function App() {
   return (
     <div>
       <Header />
-      <ProjectBoard />
+      <Dashboard />
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import CardDetails from "@/Pages/ProjectBoard/components/CardDetails";
-import Kanban from "@/Pages/ProjectBoard/components/Kanban";
+import CardDetails from "@/pages/ProjectBoard/components/CardDetails";
+import Kanban from "@/pages/ProjectBoard/components/Kanban";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
 import type { projectDetailsType } from "@/types";
 import { useContext, useState } from "react";

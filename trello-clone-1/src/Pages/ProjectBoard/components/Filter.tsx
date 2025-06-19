@@ -27,6 +27,7 @@ export default function Filter() {
             </SelectGroup>
             <SelectGroup>
               <SelectLabel>Due date</SelectLabel>
+              <SelectItem value="overdue">Overdue</SelectItem>
               <SelectItem value="today">Due Today</SelectItem>
               <SelectItem value="tomorrow">Due Tomorrow</SelectItem>
               <SelectItem value="week">Due in the next 7 days</SelectItem>
