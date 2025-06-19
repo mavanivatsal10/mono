@@ -1,66 +1,24 @@
 import CardDetails from "@/pages/ProjectBoard/components/CardDetails";
 import Kanban from "@/pages/ProjectBoard/components/Kanban";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
-import type { projectDetailsType } from "@/types";
 import { useContext, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { GlobalContext } from "@/contexts/GlobalContext";
+import { useParams } from "react-router-dom";
 
-export default function ProjectBoard({ data }: { data: projectDetailsType }) {
+export default function ProjectBoard() {
   const { showOverlay, setShowOverlay, selectedCard, setSelectedCard } =
     useContext(ProjectBoardContext);
+  const { userData } = useContext(GlobalContext);
+  const { projectId } = useParams();
 
-  const [columns, setColumns] = useState({
-    todo: [
-      {
-        id: uuidv4(),
-        title:
-          "task 1 mmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmm",
-        description:
-          "task 1 description mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmm mmmmmmmmmm",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-      {
-        id: uuidv4(),
-        title: "task 2",
-        description: "task 2 description",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-    ],
-    inProgress: [
-      {
-        id: uuidv4(),
-        title: "task 3",
-        description: "task 3 description",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-      {
-        id: uuidv4(),
-        title: "task 4",
-        description: "task 4 description",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-    ],
-    done: [
-      {
-        id: uuidv4(),
-        title: "task 5",
-        description: "task 5 description",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-      {
-        id: uuidv4(),
-        title: "task 6",
-        description: "task 6 description",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
-    ],
-  });
+  const [columns, setColumns] = useState(
+    userData.projects.find((p) => p.id === projectId)?.cards
+  );
+
+  if (!columns)
+    return (
+      <p>do something here. either auth failed or project is still loading</p>
+    );
 
   return (
     <div>

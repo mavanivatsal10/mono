@@ -13,14 +13,21 @@ import { Link } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-export default function Login() {
-  const schema = z.object({
-    email: z.string().email(),
-    password: z
-      .string()
-      .min(1, "Password is required")
-      .min(3, "Password too short"),
-  });
+export default function Signup() {
+  const schema = z
+    .object({
+      name: z.string().min(1, "Name is required"),
+      email: z.string().email(),
+      password: z
+        .string()
+        .min(1, "Password is required")
+        .min(3, "Password too short"),
+      confirmPassword: z.string().min(1, "Confirm Password is required"),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    });
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -41,6 +48,19 @@ export default function Login() {
           >
             <FormField
               control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Full Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem className="w-full">
@@ -49,7 +69,6 @@ export default function Login() {
                     <Input placeholder="Email" {...field} />
                   </FormControl>
                   <FormMessage />
-                  {}
                 </FormItem>
               )}
             />
@@ -66,17 +85,30 @@ export default function Login() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Rewrite Password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <Button type="submit" className="w-full">
-              Login
+              Sign Up
             </Button>
           </form>
         </Form>
         <p>
-          Don't have an account?{" "}
+          Already have an account?{" "}
           <u>
-            <Link to="/signup">Signup</Link>
+            <Link to="/login">Log In</Link>
           </u>{" "}
-          for free
+          !
         </p>
       </div>
     </div>
