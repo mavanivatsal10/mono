@@ -40,9 +40,15 @@ export default function CardDetails({ card, onClose, setColumns, columns }) {
     };
   }, [onClose]);
 
+  const dateFormattedCard = {
+    ...card,
+    startDate: new Date(card.startDate),
+    endDate: new Date(card.endDate),
+  };
+
   return isEditMode ? (
     <CardDetailsEdit
-      card={card}
+      card={dateFormattedCard}
       onClose={onClose}
       setColumns={setColumns}
       columns={columns}

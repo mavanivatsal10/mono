@@ -8,10 +8,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useState } from "react";
 
-export function DatePicker({ date, setDate, ref, className = "" }) {
+export function DatePicker({ date, setDate, ref, className = "", disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleDateSelect = (selectedDate) => {
+    setDate(selectedDate);
+    setIsOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -26,7 +34,12 @@ export function DatePicker({ date, setDate, ref, className = "" }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" ref={ref}>
-        <Calendar mode="single" selected={date} onSelect={setDate} />
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleDateSelect}
+          disabled={disabled ? disabled : false}
+        />
       </PopoverContent>
     </Popover>
   );

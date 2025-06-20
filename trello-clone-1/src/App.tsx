@@ -2,8 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import ProjectBoard from "./pages/ProjectBoard/ProjectBoard";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Login from "./Pages/Auth/Login";
+import Signup from "./Pages/Auth/Signup";
 import { useContext } from "react";
 import { GlobalContext } from "./contexts/GlobalContext";
 

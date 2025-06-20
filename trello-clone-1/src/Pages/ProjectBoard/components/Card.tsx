@@ -1,7 +1,11 @@
+import { GlobalContext } from "@/contexts/GlobalContext";
 import Bin from "@/icons/Bin";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import axios from "axios";
 import deepcopy from "deepcopy";
+import { useContext } from "react";
+import { useParams } from "react-router-dom";
 
 interface Props {
   card: any;
@@ -9,7 +13,13 @@ interface Props {
   setColumns: any;
 }
 
-export default function Card({ card, parent, setColumns, onClick }: Props) {
+export default function Card({
+  card,
+  parent,
+  setColumns,
+  onClick,
+  columns,
+}: Props) {
   const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
     id: `droppable-card-${card.id}`,
     data: { type: `droppable-card-${card.id}`, card, parent },
@@ -31,16 +41,37 @@ export default function Card({ card, parent, setColumns, onClick }: Props) {
     setDroppableNodeRef(el);
   };
 
+  const { projectId } = useParams();
+
+  const { userData, baseURL, setUserData } = useContext(GlobalContext);
+
   const style = {
     transform: CSS.Translate.toString(transform),
   };
 
-  const removeCard = () => {
-    setColumns((prev) => {
-      const temp = deepcopy(prev);
-      temp[parent] = temp[parent].filter((c) => c.id !== card.id);
-      return temp;
-    });
+  const removeCard = async () => {
+    const updatedColumns = deepcopy(columns);
+    const updatedCards = updatedColumns[parent].filter((c) => c.id !== card.id);
+    updatedColumns[parent] = updatedCards;
+    setColumns(updatedColumns);
+    const updatedUserData = {
+      ...userData,
+      projects: userData.projects.map((project) => {
+        if (project.id === projectId) {
+          return {
+            ...project,
+            cards: {
+              ...project.cards,
+              [parent]: updatedCards,
+            },
+          };
+        }
+        return project;
+      }),
+    };
+    setUserData(updatedUserData);
+    window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
+    await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
   };
 
   return (

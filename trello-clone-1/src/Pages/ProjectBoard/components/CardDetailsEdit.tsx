@@ -8,15 +8,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../../components/ui/form";
-import { useEffect, useRef } from "react";
-import { Input } from "../../../components/ui/input";
+} from "@/components/ui/form";
+import { useContext, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
 import { ChartNoAxesColumn, Clock, ScrollText, X } from "lucide-react";
-import { Textarea } from "../../../components/ui/textarea";
-import { DatePicker } from "../../../components/ui/date-picker";
-import { Button } from "../../../components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
 import deepcopy from "deepcopy";
-import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { GlobalContext } from "@/contexts/GlobalContext";
+import { useParams } from "react-router-dom";
+import axios from "axios";
 
 export default function CardDetailsEdit({
   card,
@@ -24,6 +27,8 @@ export default function CardDetailsEdit({
   setColumns,
   columns,
 }) {
+  const { userData, setUserData, baseURL } = useContext(GlobalContext);
+
   const findColumn = () => {
     for (const key in columns) {
       if (columns[key].some((c) => c.id === card.id)) {
@@ -59,62 +64,55 @@ export default function CardDetailsEdit({
     },
   });
 
-  const handleSubmit = (data) => {
-    setColumns((prev) => {
-      const temp = deepcopy(prev);
-      let column = findColumn();
+  const { projectId } = useParams();
 
-      if (column !== data.status) {
-        temp[column] = temp[column].filter((c) => c.id !== card.id);
-        temp[data.status] = [...temp[data.status], card];
-        column = data.status;
+  const handleSubmit = async (data) => {
+    const updatedColumns = deepcopy(columns);
+    let column = findColumn();
+    if (column !== data.status) {
+      updatedColumns[column] = updatedColumns[column].filter(
+        (c) => c.id !== card.id
+      );
+      updatedColumns[data.status] = [...updatedColumns[data.status], card];
+      column = data.status;
+    }
+
+    updatedColumns[column] = updatedColumns[column].map((c) => {
+      if (c.id === card.id) {
+        return {
+          ...c,
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate,
+          endDate: data.endDate,
+        };
       }
+      return c;
+    });
 
-      temp[column] = temp[column].map((c) => {
-        if (c.id === card.id) {
+    setColumns(updatedColumns);
+    const updatedUserData = {
+      ...userData,
+      projects: userData.projects.map((project) => {
+        if (project.id === projectId) {
           return {
-            ...c,
-            title: data.title,
-            description: data.description,
-            startDate: data.startDate,
-            endDate: data.endDate,
+            ...project,
+            cards: updatedColumns,
           };
         }
-        return c;
-      });
-      return temp;
-    });
+        return project;
+      }),
+    };
+    setUserData(updatedUserData);
+    window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
+    try {
+      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+    } catch (error) {
+      console.error("Error adding project:", error);
+    }
+
     onClose();
   };
-
-  // utility effect to set start and end date errors
-  const startDate = form.watch("startDate");
-  const endDate = form.watch("endDate");
-  useEffect(() => {
-    if (!startDate) {
-      form.setError("startDate", {
-        type: "manual",
-        message: "Start date is required",
-      });
-    } else if (!endDate) {
-      form.setError("endDate", {
-        type: "manual",
-        message: "End date is required",
-      });
-    } else if (startDate && endDate && endDate < startDate) {
-      form.setError("endDate", {
-        type: "manual",
-        message: "End date must be on or after start date",
-      });
-      form.setError("startDate", {
-        type: "manual",
-        message: "Start date must be before end date",
-      });
-    } else {
-      form.clearErrors("startDate");
-      form.clearErrors("endDate");
-    }
-  }, [startDate, endDate]);
 
   // confirm edit on enter key press
   useEffect(() => {
@@ -226,10 +224,12 @@ export default function CardDetailsEdit({
                                 ? "ring-destructive/20 dark:ring-destructive/40 border-destructive"
                                 : ""
                             }
+                            disabled={(date) =>
+                              date < form.getValues("startDate")
+                            }
                           />
                         </FormControl>
                         <FormMessage />
-                        {}
                       </FormItem>
                     )}
                   />

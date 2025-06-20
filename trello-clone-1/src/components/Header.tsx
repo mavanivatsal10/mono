@@ -11,7 +11,7 @@ export default function Header() {
     <div
       className={`flex items-center ${
         userData ? "justify-between" : "justify-center"
-      } border-b-1 border-black p-2 w-screen ${
+      } border-b border-black p-2 w-full sticky top-0 z-40 bg-white ${
         showOverlay ? "blur-sm opacity-75" : ""
       }`}
     >

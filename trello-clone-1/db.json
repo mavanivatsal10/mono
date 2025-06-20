@@ -153,6 +153,24 @@
             ],
             "done": []
           }
+        },
+        {
+          "id": "185cc1d1-0a6f-4f67-97e7-650ac30da23c",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "500de5c2-f4c3-42f8-a5e1-fbf3a6b311b7",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
         }
       ]
     },
@@ -318,7 +336,222 @@
       "email": "mavanivatsal10@gmail.com",
       "password": "password123",
       "position": "Dev",
-      "projects": []
+      "projects": [
+        {
+          "id": "4190c986-34c7-4fd4-9313-b52781a2cd0e",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [
+              {
+                "id": "e2480f56-1996-42ef-9eb4-26cf65418167",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T09:56:33.088Z",
+                "endDate": "2025-06-27T09:56:33.088Z"
+              }
+            ],
+            "done": []
+          }
+        }
+      ],
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "id": "34f44121-5231-4f8a-a88a-289071b7b0b3",
+      "name": "Mital",
+      "email": "mital@gmail.com",
+      "password": "Admin@123",
+      "position": "developer",
+      "projects": [
+        {
+          "id": "a87649a1-6959-4ee2-8aae-99d23492ff08",
+          "title": "New Project",
+          "cards": {
+            "todo": [
+              {
+                "id": "4dbe5898-ad15-44ab-80d4-3d2974b9ba5c",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T08:31:08.022Z",
+                "endDate": "2025-06-27T08:31:08.022Z"
+              },
+              {
+                "id": "2c31b532-0fa5-435e-ba1a-2377dda0e868",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T08:32:44.613Z",
+                "endDate": "2025-06-27T08:32:44.613Z"
+              }
+            ],
+            "inProgress": [
+              {
+                "id": "19538237-003c-49b0-93ad-804fc9b04422",
+                "title": "trello project setup",
+                "description": "trello project setup",
+                "startDate": "2025-06-22T18:30:00.000Z",
+                "endDate": "2025-06-28T18:30:00.000Z"
+              }
+            ],
+            "done": [
+              {
+                "id": "1fa1a4e9-ec9f-4761-ad1d-0d232468ae7d",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T08:32:43.925Z",
+                "endDate": "2025-06-27T08:32:43.925Z"
+              },
+              {
+                "id": "d1b5d83e-ab85-43c4-8168-029afe3e629a",
+                "title": "New Card 1111",
+                "description": "test 1111",
+                "startDate": "2025-06-17T18:30:00.000Z",
+                "endDate": "2025-06-24T18:30:00.000Z"
+              },
+              {
+                "id": "53ad5b02-9bd3-4aaf-a522-ae9f0a54d62e",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T08:32:45.333Z",
+                "endDate": "2025-06-27T08:32:45.333Z"
+              }
+            ]
+          }
+        },
+        {
+          "id": "ef8d4421-5ab5-45cd-a4a7-07f1986a02d2",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "71086618-554d-450a-bc8e-30fee469fb9e",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "bdb52b1f-4eb6-40e4-99b9-4ba657c80487",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "5642fb90-5510-4f46-b297-d914070a4f4e",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "40eccd7b-ce22-4c16-ab5f-1f7cea4ec5da",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "5395dcb6-2588-405d-ba56-a4e8194f0734",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "cb93d0f3-acf9-4990-8972-d180acfee4f2",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "50258992-be7f-4706-9a6e-f1c0e041cb9f",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "c9049d57-781e-4dc5-aa2e-78b5e647cca2",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "4badb11f-b014-4be3-9066-1023f419eba5",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        },
+        {
+          "id": "d78dd242-23f3-4e82-a0c6-911975286a5d",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "800244a7-a77f-498b-8d0f-02937669a73b",
+      "name": "Vatsal",
+      "email": "vatsalmavani.vision@gmail.com",
+      "password": "password123",
+      "position": "designer",
+      "projects": [
+        {
+          "id": "a000fe68-4b50-4928-a097-2554f0dfe9d2",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [],
+            "done": [
+              {
+                "id": "9a13c6c2-ebc1-45fe-ac10-82137d23a82b",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-03T18:30:00.000Z",
+                "endDate": "2025-06-10T18:30:00.000Z"
+              },
+              {
+                "id": "92b2f4a2-a9fe-45d8-b0bd-d443fd12736f",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-11T18:30:00.000Z",
+                "endDate": "2025-06-11T18:30:00.000Z"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -5,30 +5,52 @@ import { v4 as uuidv4 } from "uuid";
 import { useContext } from "react";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
 import { addDays } from "date-fns";
+import { GlobalContext } from "@/contexts/GlobalContext";
+import axios from "axios";
+import { useParams } from "react-router-dom";
 
-export default function Column({ title, cards, setColumns }) {
+export default function Column({ title, cards, setColumns, columns }) {
   const { setShowOverlay, setSelectedCard, getTitle, filter } =
     useContext(ProjectBoardContext);
+  const { baseURL, userData, setUserData } = useContext(GlobalContext);
+
   const { isOver, setNodeRef } = useDroppable({
     id: title,
   });
+  const { projectId } = useParams();
 
-  const addCard = () => {
-    // !card
-    setColumns((prev) => {
-      return {
-        ...prev,
-        [title]: [
-          ...prev[title],
-          {
-            id: uuidv4(),
-            title: `Card ${prev[title].length + 1}`,
-            startDate: new Date(),
-            description: "",
-          },
-        ],
-      };
-    });
+  const addCard = async () => {
+    // update the server with the new card
+    const newCard = {
+      id: uuidv4(),
+      title: "New Card",
+      description: "",
+      startDate: new Date(),
+      endDate: addDays(new Date(), 7),
+    };
+    const updatedCards = [...cards, newCard];
+    setColumns((prev) => ({
+      ...prev,
+      [title]: updatedCards,
+    }));
+    const updatedUserData = {
+      ...userData,
+      projects: userData.projects.map((project) => {
+        if (project.id === projectId) {
+          return {
+            ...project,
+            cards: {
+              ...project.cards,
+              [title]: updatedCards,
+            },
+          };
+        }
+        return project;
+      }),
+    };
+    setUserData(updatedUserData);
+    window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
+    await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
   };
 
   const filteredCards = cards.filter((card) => {
@@ -69,6 +91,7 @@ export default function Column({ title, cards, setColumns }) {
           key={card.id}
           parent={title}
           setColumns={setColumns}
+          columns={columns}
           onClick={() => {
             setShowOverlay(true);
             setSelectedCard(card);
