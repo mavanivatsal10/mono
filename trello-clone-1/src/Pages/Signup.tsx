@@ -9,11 +9,24 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useContext, useEffect } from "react";
+import { GlobalContext } from "@/contexts/GlobalContext";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 export default function Signup() {
+  const { baseURL, setUserData, userData } = useContext(GlobalContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (userData) {
+      navigate("/");
+    }
+  }, [userData]);
+
   const schema = z
     .object({
       name: z.string().min(1, "Name is required"),
@@ -23,6 +36,7 @@ export default function Signup() {
         .min(1, "Password is required")
         .min(3, "Password too short"),
       confirmPassword: z.string().min(1, "Confirm Password is required"),
+      position: z.string().min(1, "Position is required"),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: "Passwords do not match",
@@ -34,8 +48,33 @@ export default function Signup() {
     defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
-    // check if user exists in json server
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    try {
+      const response = await axios.get(`${baseURL}/users`);
+      const isFound = response.data.some((user) => user.email === data.email);
+      if (isFound) {
+        alert("User already exists with this email");
+        return;
+      }
+      const currentUser = {
+        id: uuidv4(),
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        position: data.position,
+        projects: [],
+      };
+      setUserData(currentUser);
+      window.localStorage.setItem(
+        "userData",
+        JSON.stringify(currentUser ? currentUser : null)
+      );
+      const res = await axios.post(`${baseURL}/users`, currentUser);
+      console.log("User created successfully:", res.data);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUserData(null);
+    }
   };
 
   return (
@@ -93,6 +132,19 @@ export default function Signup() {
                   <FormLabel>Confirm Password</FormLabel>
                   <FormControl>
                     <Input placeholder="Rewrite Password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Position</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Position" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

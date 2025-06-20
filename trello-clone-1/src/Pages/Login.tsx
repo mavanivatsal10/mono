@@ -9,11 +9,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { use, useContext, useEffect } from "react";
+import { GlobalContext } from "@/contexts/GlobalContext";
+import axios from "axios";
 
 export default function Login() {
+  const { baseURL, userData, setUserData } = useContext(GlobalContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (userData) {
+      navigate("/");
+    }
+  }, [userData]);
+
   const schema = z.object({
     email: z.string().email(),
     password: z
@@ -27,8 +39,21 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
-    // check if user exists in json server
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    try {
+      const response = await axios.get(`${baseURL}/users`);
+      const currentUser = response.data.find(
+        (user) => user.email === data.email && user.password === data.password
+      );
+      setUserData(currentUser ? currentUser : null);
+      window.localStorage.setItem(
+        "userData",
+        JSON.stringify(currentUser ? currentUser : null)
+      );
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUserData(null);
+    }
   };
 
   return (
