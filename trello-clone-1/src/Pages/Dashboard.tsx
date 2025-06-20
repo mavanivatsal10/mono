@@ -4,14 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { useContext, useState } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Bin from "@/icons/Bin";
 import { SquarePen } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { updateUserObject } from "@/api/user";
 
 export default function Dashboard() {
-  const { userData, baseURL, setUserData } = useContext(GlobalContext);
+  const { userData, setUserData } = useContext(GlobalContext);
   const navigate = useNavigate();
 
   const tableData = userData.projects.map((project) => {
@@ -43,11 +43,7 @@ export default function Dashboard() {
     const updatedUserData = { ...userData, projects: updatedProjects };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    try {
-      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
-    } catch (error) {
-      console.error("Error adding project:", error);
-    }
+    await updateUserObject(userData.id, updatedUserData);
   };
 
   const handleDeleteProject = async (row: typeof tableData) => {
@@ -57,11 +53,7 @@ export default function Dashboard() {
     const updatedUserData = { ...userData, projects: updatedProjects };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    try {
-      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
-    } catch (error) {
-      console.error("Error adding project:", error);
-    }
+    await updateUserObject(userData.id, updatedUserData);
   };
 
   const dashboardColumns = [
@@ -145,11 +137,7 @@ export default function Dashboard() {
     const updatedUserData = { ...userData, projects: updatedProjects };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    try {
-      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
-    } catch (error) {
-      console.error("Error adding project:", error);
-    }
+    await updateUserObject(userData.id, updatedUserData);
   };
 
   return (

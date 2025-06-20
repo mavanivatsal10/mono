@@ -1,538 +1,113 @@
 {
   "users": [
     {
-      "id": "373debdf-7e26-4b18-8335-6ae6beb449d7",
-      "name": "John Doe",
-      "email": "john@j.com",
-      "password": "password123",
+      "id": "fa845272-c047-4834-a954-cc0d8dd3246b",
+      "name": "Vatsal Mavani",
+      "email": "vatsalmavani@protonmail.com",
+      "password": "pass",
       "position": "developer",
       "projects": [
         {
-          "id": "caff9b46-641d-4e85-910a-5241ac6a61a1",
-          "title": "my first project",
+          "id": "65f0d39d-b6db-4251-b564-711c2480df56",
+          "title": "New Project",
           "cards": {
             "todo": [
               {
-                "id": "c93b6408-4c39-4ae5-9ed9-a426e3de44a8",
-                "title": "task 1 mmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmm",
-                "description": "task 1 description mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmm mmmmmmmmmm",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
+                "id": "3f45cf64-eb9f-46bd-8af3-867a070037d8",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:24:52.653Z",
+                "endDate": "2025-06-27T19:24:52.653Z"
               },
               {
-                "id": "328eea09-7fd8-4dd0-891f-b0a4637484fd",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
+                "id": "b476a24d-1015-49c1-9e09-8e291caff32e",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:24:53.771Z",
+                "endDate": "2025-06-27T19:24:53.771Z"
               }
             ],
             "inProgress": [
               {
-                "id": "860b2689-460e-49b0-92a8-5ad9b79d2448",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
+                "id": "3e1e563d-115f-49c9-8912-9662ff99907a",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:24:51.403Z",
+                "endDate": "2025-06-27T19:24:51.403Z"
+              }
+            ],
+            "done": []
+          }
+        },
+        {
+          "id": "959f1170-462d-440c-b09e-508aebda922a",
+          "title": "New Project",
+          "cards": {
+            "todo": [],
+            "inProgress": [
               {
-                "id": "e3554d29-bd26-419f-8bce-5558d7486866",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
+                "id": "294ae289-ad2a-4507-9987-fb7391527090",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:25:07.569Z",
+                "endDate": "2025-06-27T19:25:07.569Z"
               }
             ],
             "done": [
               {
-                "id": "69abcce7-9138-4598-bbc3-b757131ca5bc",
-                "title": "task 5",
-                "description": "task 5 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
+                "id": "883f62c6-f68f-4e48-a473-40a0bd639dac",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:25:09.437Z",
+                "endDate": "2025-06-27T19:25:09.437Z"
               },
               {
-                "id": "03cd8b25-c64e-445c-8b18-25d2d34f5331",
-                "title": "task 6",
-                "description": "task 6 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
+                "id": "f8a1f6d2-e5a1-4d46-bfa1-c0c4649d8425",
+                "title": "New Card",
+                "description": "",
+                "startDate": "2025-06-20T19:25:10.903Z",
+                "endDate": "2025-06-27T19:25:10.903Z"
               }
             ]
-          }
-        },
-        {
-          "id": "67655e09-c5c6-4f4e-b84f-95c99cd8cf5d",
-          "title": "my first project",
-          "cards": {
-            "todo": [
-              {
-                "id": "be35a936-290f-4334-8dc2-75806b3e2aa6",
-                "title": "task 1 mmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmm",
-                "description": "task 1 description mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmm mmmmmmmmmm",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
-              {
-                "id": "b31c3f0a-b967-403f-9045-0eb659bdb963",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "52486e52-5323-4ea1-aa5e-2a6dbc75bab9",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
-              {
-                "id": "3f776e21-63a5-4686-be9f-f30f48ccd921",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
-              {
-                "id": "1aa73d43-75e5-487b-b435-2ce28a1226cb",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              }
-            ],
-            "done": [
-              {
-                "id": "7a896b22-73c4-4239-a25c-f7c8403b3f5a",
-                "title": "task 5",
-                "description": "task 5 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
-              {
-                "id": "59536fa2-acd9-48c2-8178-0b7c41f4db3e",
-                "title": "task 6",
-                "description": "task 6 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              }
-            ]
-          }
-        },
-        {
-          "id": "562904f9-c93f-41f6-944a-da2aa81381bb",
-          "title": "my first project",
-          "cards": {
-            "todo": [
-              {
-                "id": "a863b7a9-c1f7-4d0e-b1f3-66996d15a12f",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "3321c76e-bd74-4b2a-8f9c-ae159e8b0b53",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.391Z"
-              },
-              {
-                "id": "e97944f9-e136-496b-825a-b5ef79593082",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.391Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "done": []
-          }
-        },
-        {
-          "id": "185cc1d1-0a6f-4f67-97e7-650ac30da23c",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "500de5c2-f4c3-42f8-a5e1-fbf3a6b311b7",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
           }
         }
       ]
     },
     {
-      "id": "1013cb2e-e1f5-4b5d-8cd3-62a84c998c78",
-      "name": "Jane Doe",
-      "email": "jane@j.com",
-      "password": "password123",
+      "id": "0c8727aa-957a-49eb-81f8-152fbcb372f8",
+      "name": "dhwani mavani",
+      "email": "d@gmail.com",
+      "password": "pass",
       "position": "manager",
       "projects": [
         {
-          "id": "c1b71352-1f63-4434-a9b4-183910a5d97f",
-          "title": "my first project",
-          "cards": {
-            "todo": [
-              {
-                "id": "03213ef3-702f-4225-9ec8-e5c80c995e83",
-                "title": "task 1 mmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmm",
-                "description": "task 1 description mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmm mmmmmmmmmm",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "8a16605a-107c-43c9-9f70-3f2b4ede9e28",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "c4e4357e-cbaa-475f-8e8b-b50fd5a7b845",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "d7a135e8-9991-4d46-ac78-847a69f9e10b",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "done": [
-              {
-                "id": "6dd42953-806f-4e4c-9b56-a5519945b241",
-                "title": "task 5",
-                "description": "task 5 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "13e29485-45fc-456b-94ec-b356e5ae3e3f",
-                "title": "task 6",
-                "description": "task 6 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ]
-          }
-        },
-        {
-          "id": "47c651b4-ac11-464f-af6e-bc5d54273e7a",
-          "title": "my first project",
-          "cards": {
-            "todo": [
-              {
-                "id": "3009c64c-eff3-4216-a38c-960661c59cb1",
-                "title": "task 1 mmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmmmm mmmmmmmmmmmmmmm mmmmmmmmmmmmm",
-                "description": "task 1 description mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm mmmmmmmmmmmmmm mmmmmmmmmm mmmmmmmmmm",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "ba40f44d-3ef8-4135-a1dc-bf6b6b8e2b15",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "cd2b7441-694d-43d8-b783-db4c0554504e",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "21c845f4-bdf2-43c8-9caa-72e5ae6d33fe",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "08ee15c3-9749-47a1-88d7-ee81f3054922",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "done": [
-              {
-                "id": "a0dcc166-feec-4a95-b586-25990b491421",
-                "title": "task 5",
-                "description": "task 5 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "d1cdf0e7-49ab-419f-af2e-aaeeb8cef5f2",
-                "title": "task 6",
-                "description": "task 6 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ]
-          }
-        },
-        {
-          "id": "00a86fc3-d47d-4d90-ab0e-af2366e069aa",
-          "title": "my first project",
-          "cards": {
-            "todo": [
-              {
-                "id": "3ce86898-e650-4b25-85a1-466fa648a54d",
-                "title": "task 2",
-                "description": "task 2 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "1ad0365c-0aeb-4d95-9dcd-6808b7af64de",
-                "title": "task 3",
-                "description": "task 3 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              },
-              {
-                "id": "8c3ef18c-0969-4aa2-8059-87bb939b137e",
-                "title": "task 4",
-                "description": "task 4 description",
-                "startDate": "2025-06-20T04:46:10.392Z",
-                "endDate": "2025-06-20T04:46:10.392Z"
-              }
-            ],
-            "done": []
-          }
-        }
-      ]
-    },
-    {
-      "id": "8ee7644a-b76d-4388-8065-1fa678336527",
-      "name": "Vatsal",
-      "email": "mavanivatsal10@gmail.com",
-      "password": "password123",
-      "position": "Dev",
-      "projects": [
-        {
-          "id": "4190c986-34c7-4fd4-9313-b52781a2cd0e",
+          "id": "abaa9cc9-710e-462f-973f-8b1291a29f87",
           "title": "New Project",
           "cards": {
             "todo": [],
             "inProgress": [
               {
-                "id": "e2480f56-1996-42ef-9eb4-26cf65418167",
+                "id": "a4c874b2-ed1b-4a35-a5c8-cdca800b898f",
                 "title": "New Card",
                 "description": "",
-                "startDate": "2025-06-20T09:56:33.088Z",
-                "endDate": "2025-06-27T09:56:33.088Z"
-              }
-            ],
-            "done": []
-          }
-        }
-      ],
-      "startDate": null,
-      "endDate": null
-    },
-    {
-      "id": "34f44121-5231-4f8a-a88a-289071b7b0b3",
-      "name": "Mital",
-      "email": "mital@gmail.com",
-      "password": "Admin@123",
-      "position": "developer",
-      "projects": [
-        {
-          "id": "a87649a1-6959-4ee2-8aae-99d23492ff08",
-          "title": "New Project",
-          "cards": {
-            "todo": [
-              {
-                "id": "4dbe5898-ad15-44ab-80d4-3d2974b9ba5c",
-                "title": "New Card",
-                "description": "",
-                "startDate": "2025-06-20T08:31:08.022Z",
-                "endDate": "2025-06-27T08:31:08.022Z"
+                "startDate": "2025-06-20T19:25:53.285Z",
+                "endDate": "2025-06-27T19:25:53.285Z"
               },
               {
-                "id": "2c31b532-0fa5-435e-ba1a-2377dda0e868",
+                "id": "752e8da6-42f5-4d51-8f67-38af276a3db1",
                 "title": "New Card",
                 "description": "",
-                "startDate": "2025-06-20T08:32:44.613Z",
-                "endDate": "2025-06-27T08:32:44.613Z"
-              }
-            ],
-            "inProgress": [
-              {
-                "id": "19538237-003c-49b0-93ad-804fc9b04422",
-                "title": "trello project setup",
-                "description": "trello project setup",
-                "startDate": "2025-06-22T18:30:00.000Z",
-                "endDate": "2025-06-28T18:30:00.000Z"
-              }
-            ],
-            "done": [
-              {
-                "id": "1fa1a4e9-ec9f-4761-ad1d-0d232468ae7d",
-                "title": "New Card",
-                "description": "",
-                "startDate": "2025-06-20T08:32:43.925Z",
-                "endDate": "2025-06-27T08:32:43.925Z"
+                "startDate": "2025-06-20T19:25:53.869Z",
+                "endDate": "2025-06-27T19:25:53.869Z"
               },
               {
-                "id": "d1b5d83e-ab85-43c4-8168-029afe3e629a",
-                "title": "New Card 1111",
-                "description": "test 1111",
-                "startDate": "2025-06-17T18:30:00.000Z",
-                "endDate": "2025-06-24T18:30:00.000Z"
-              },
-              {
-                "id": "53ad5b02-9bd3-4aaf-a522-ae9f0a54d62e",
+                "id": "f9020fca-9222-4e4b-ab99-79ed1063593b",
                 "title": "New Card",
                 "description": "",
-                "startDate": "2025-06-20T08:32:45.333Z",
-                "endDate": "2025-06-27T08:32:45.333Z"
+                "startDate": "2025-06-20T19:25:55.184Z",
+                "endDate": "2025-06-27T19:25:55.184Z"
               }
-            ]
-          }
-        },
-        {
-          "id": "ef8d4421-5ab5-45cd-a4a7-07f1986a02d2",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "71086618-554d-450a-bc8e-30fee469fb9e",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "bdb52b1f-4eb6-40e4-99b9-4ba657c80487",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "5642fb90-5510-4f46-b297-d914070a4f4e",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "40eccd7b-ce22-4c16-ab5f-1f7cea4ec5da",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "5395dcb6-2588-405d-ba56-a4e8194f0734",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "cb93d0f3-acf9-4990-8972-d180acfee4f2",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "50258992-be7f-4706-9a6e-f1c0e041cb9f",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "c9049d57-781e-4dc5-aa2e-78b5e647cca2",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "4badb11f-b014-4be3-9066-1023f419eba5",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        },
-        {
-          "id": "d78dd242-23f3-4e82-a0c6-911975286a5d",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
-            "done": []
-          }
-        }
-      ]
-    },
-    {
-      "id": "800244a7-a77f-498b-8d0f-02937669a73b",
-      "name": "Vatsal",
-      "email": "vatsalmavani.vision@gmail.com",
-      "password": "password123",
-      "position": "designer",
-      "projects": [
-        {
-          "id": "6051aee9-c594-4b04-be53-df77f9518693",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [],
+            ],
             "done": []
           }
         }

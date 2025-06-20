@@ -11,11 +11,11 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext, useState } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
-import axios from "axios";
 import Layout from "./components/Layout";
+import { getAllUsers } from "@/api/user";
 
 export default function Login() {
-  const { baseURL, setUserData } = useContext(GlobalContext);
+  const { setUserData } = useContext(GlobalContext);
   const [userNotFound, setUserNotFound] = useState(false);
 
   const schema = z.object({
@@ -31,28 +31,23 @@ export default function Login() {
   });
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
-    try {
-      const response = await axios.get(`${baseURL}/users`);
-      const currentUser = response.data.find(
-        (user) => user.email === data.email && user.password === data.password
-      );
-      if (!currentUser) {
-        setUserNotFound(true);
-      }
-      const dateFormattedUser = {
-        ...currentUser,
-        startDate: new Date(currentUser.startDate),
-        endDate: new Date(currentUser.endDate),
-      };
-      setUserData(dateFormattedUser ? dateFormattedUser : null);
-      window.localStorage.setItem(
-        "userData",
-        JSON.stringify(dateFormattedUser ? dateFormattedUser : null)
-      );
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      setUserData(null);
+    const response = await getAllUsers();
+    const currentUser = response.data.find(
+      (user) => user.email === data.email && user.password === data.password
+    );
+    if (!currentUser) {
+      setUserNotFound(true);
     }
+    const dateFormattedUser = {
+      ...currentUser,
+      startDate: new Date(currentUser.startDate),
+      endDate: new Date(currentUser.endDate),
+    };
+    setUserData(dateFormattedUser ? dateFormattedUser : null);
+    window.localStorage.setItem(
+      "userData",
+      JSON.stringify(dateFormattedUser ? dateFormattedUser : null)
+    );
   };
 
   return (

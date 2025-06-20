@@ -11,7 +11,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useContext } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
-import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import {
   Select,
@@ -21,9 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Layout from "./components/Layout";
+import { addUser, getAllUsers } from "@/api/user";
 
 export default function Signup() {
-  const { baseURL, setUserData } = useContext(GlobalContext);
+  const { setUserData } = useContext(GlobalContext);
 
   const schema = z
     .object({
@@ -46,32 +46,26 @@ export default function Signup() {
   });
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
-    try {
-      const response = await axios.get(`${baseURL}/users`);
-      const isFound = response.data.some((user) => user.email === data.email);
-      if (isFound) {
-        alert("User already exists with this email");
-        return;
-      }
-      const currentUser = {
-        id: uuidv4(),
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        position: data.position,
-        projects: [],
-      };
-      setUserData(currentUser);
-      window.localStorage.setItem(
-        "userData",
-        JSON.stringify(currentUser ? currentUser : null)
-      );
-      const res = await axios.post(`${baseURL}/users`, currentUser);
-      console.log("User created successfully:", res.data);
-    } catch (error) {
-      console.error("Error creating new user:", error);
-      setUserData(null);
+    const response = await getAllUsers();
+    const isFound = response.data?.some((user) => user.email === data.email);
+    if (isFound) {
+      alert("User already exists with this email");
+      return;
     }
+    const currentUser = {
+      id: uuidv4(),
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      position: data.position,
+      projects: [],
+    };
+    setUserData(currentUser);
+    window.localStorage.setItem(
+      "userData",
+      JSON.stringify(currentUser ? currentUser : null)
+    );
+    await addUser(currentUser);
   };
 
   return (
@@ -122,7 +116,11 @@ export default function Signup() {
           <FormItem className="w-full">
             <FormLabel>Confirm Password</FormLabel>
             <FormControl>
-              <Input placeholder="Rewrite Password" {...field} />
+              <Input
+                placeholder="Rewrite Password"
+                {...field}
+                type="password"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

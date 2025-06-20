@@ -14,6 +14,7 @@ import { GlobalContext } from "@/contexts/GlobalContext";
 import { useContext } from "react";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
+import { updateUserObject } from "@/api/user";
 
 export default function Kanban({ columns, setColumns }) {
   const mouseSensor = useSensor(MouseSensor, {
@@ -66,7 +67,7 @@ export default function Kanban({ columns, setColumns }) {
       };
       setUserData(updatedUserData);
       window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+      await updateUserObject(userData.id, updatedUserData);
     };
 
     const handleCardDrop = async () => {
@@ -105,7 +106,7 @@ export default function Kanban({ columns, setColumns }) {
           "userData",
           JSON.stringify(updatedUserData)
         );
-        await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+        await updateUserObject(userData.id, updatedUserData);
       };
       const handleSameColumn = () => {
         const cards = columns[sourceColumn];
@@ -161,7 +162,7 @@ export default function Kanban({ columns, setColumns }) {
   return (
     <div className="m-4 sleect-none">
       <div
-        className="flex gap-2 text-gray-500 cursor-pointer select-none"
+        className="flex gap-2 text-gray-500 cursor-pointer select-none w-fit"
         onClick={() => navigate("/")}
       >
         <ArrowLeft />

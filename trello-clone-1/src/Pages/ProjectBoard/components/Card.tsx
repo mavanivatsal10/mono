@@ -1,3 +1,4 @@
+import { updateUserObject } from "@/api/user";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import Bin from "@/icons/Bin";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
@@ -71,7 +72,7 @@ export default function Card({
     };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+    await updateUserObject(userData.id, updatedUserData);
   };
 
   return (

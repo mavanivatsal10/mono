@@ -19,7 +19,8 @@ import deepcopy from "deepcopy";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import { isBefore, startOfDay } from "date-fns";
+import { updateUserObject } from "@/api/user";
 
 export default function CardDetailsEdit({
   card,
@@ -27,7 +28,7 @@ export default function CardDetailsEdit({
   setColumns,
   columns,
 }) {
-  const { userData, setUserData, baseURL } = useContext(GlobalContext);
+  const { userData, setUserData } = useContext(GlobalContext);
 
   const findColumn = () => {
     for (const key in columns) {
@@ -105,11 +106,7 @@ export default function CardDetailsEdit({
     };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    try {
-      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
-    } catch (error) {
-      console.error("Error adding project:", error);
-    }
+    await updateUserObject(userData.id, updatedUserData);
 
     onClose();
   };
@@ -224,10 +221,11 @@ export default function CardDetailsEdit({
                                 ? "ring-destructive/20 dark:ring-destructive/40 border-destructive"
                                 : ""
                             }
-                            disabled={(date) =>
-                              date.getDate() <
-                              form.getValues("startDate").getDate()
-                            }
+                            disabled={(date) => {
+                              const day = startOfDay(date);
+                              const today = startOfDay(new Date());
+                              return isBefore(day, today);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />

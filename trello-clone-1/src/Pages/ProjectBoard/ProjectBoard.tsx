@@ -3,14 +3,13 @@ import Kanban from "@/Pages/ProjectBoard/components/Board";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
 import { useContext, useState } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 export default function ProjectBoard() {
   const { showOverlay, setShowOverlay, selectedCard, setSelectedCard } =
     useContext(ProjectBoardContext);
   const { userData } = useContext(GlobalContext);
   const { projectId } = useParams();
-  const navigate = useNavigate();
 
   const [columns, setColumns] = useState(
     userData.projects.find((p) => p.id === projectId)?.cards

@@ -4,17 +4,18 @@ import Plus from "@/icons/Plus";
 import { v4 as uuidv4 } from "uuid";
 import { useContext } from "react";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
-import { addDays } from "date-fns";
+import { addDays, endOfDay, isBefore, isToday, startOfDay } from "date-fns";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import { updateUserObject } from "@/api/user";
 
 export default function Column({ title, cards, setColumns, columns }) {
   const { setShowOverlay, setSelectedCard, getTitle, filter } =
     useContext(ProjectBoardContext);
   const { baseURL, userData, setUserData } = useContext(GlobalContext);
 
-  const { isOver, setNodeRef } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: title,
   });
   const { projectId } = useParams();
@@ -50,31 +51,31 @@ export default function Column({ title, cards, setColumns, columns }) {
     };
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
-    await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+    await updateUserObject(userData.id, updatedUserData);
   };
 
   const filteredCards = cards.filter((card) => {
+    const endDate = startOfDay(new Date(card.endDate));
+    const today = startOfDay(new Date());
+    let numAddDays = 0;
+
     if (filter === "all") return true;
     else if (filter === "overdue") {
-      return card.endDate <= addDays(new Date(), -1);
+      return isBefore(endDate, today);
     } else if (filter === "today") {
-      return card.endDate <= new Date();
+      return isToday(endDate);
     } else if (filter === "tomorrow") {
-      return (
-        card.endDate >= addDays(new Date(), -1) &&
-        card.endDate <= addDays(new Date(), 1)
-      );
+      numAddDays = 1;
     } else if (filter === "week") {
-      return (
-        card.endDate >= addDays(new Date(), -1) &&
-        card.endDate <= addDays(new Date(), 7)
-      );
+      numAddDays = 7;
     } else if (filter === "month") {
-      return (
-        card.endDate >= addDays(new Date(), -1) &&
-        card.endDate <= addDays(new Date(), 30)
-      );
-    } else return true; // Default case, return all cards
+      numAddDays = 30;
+    }
+
+    const notOverdue = !isBefore(endDate, today);
+    const dueDay = endOfDay(addDays(today, numAddDays));
+    console.log(dueDay);
+    return notOverdue && isBefore(endDate, dueDay);
   });
 
   return (
