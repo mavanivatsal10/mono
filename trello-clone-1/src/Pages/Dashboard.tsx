@@ -1,12 +1,14 @@
 import { Separator } from "@/components/ui/separator";
 import DataTable from "react-data-table-component";
 import { useNavigate } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Bin from "@/icons/Bin";
+import { SquarePen } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function Dashboard() {
   const { userData, baseURL, setUserData } = useContext(GlobalContext);
@@ -22,6 +24,32 @@ export default function Dashboard() {
     };
   });
 
+  const [isEditTitle, setIsEditTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+
+  const handleEditTitle = (row: typeof tableData) => {
+    setIsEditTitle(true);
+    setEditTitle(row.title);
+  };
+
+  const handleSaveEditTitle = async (row: typeof tableData) => {
+    setIsEditTitle(false);
+    const updatedProjects = userData.projects.map((project) => {
+      if (project.id === row.id) {
+        return { ...project, title: editTitle };
+      }
+      return project;
+    });
+    const updatedUserData = { ...userData, projects: updatedProjects };
+    setUserData(updatedUserData);
+    window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
+    try {
+      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
+    } catch (error) {
+      console.error("Error adding project:", error);
+    }
+  };
+
   const handleDeleteProject = async (row: typeof tableData) => {
     const updatedProjects = userData.projects.filter(
       (project) => project.id !== row.id
@@ -30,10 +58,7 @@ export default function Dashboard() {
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
     try {
-      await axios.patch(
-        `${baseURL}/users/${userData.id}`,
-        updatedUserData
-      );
+      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
     } catch (error) {
       console.error("Error adding project:", error);
     }
@@ -42,9 +67,28 @@ export default function Dashboard() {
   const dashboardColumns = [
     {
       name: "Project Title",
-      selector: (row: typeof tableData) => row.title,
       sortable: true,
       minWidth: "250px",
+      cell: (row: typeof tableData) => {
+        return isEditTitle ? (
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={() => handleSaveEditTitle(row)}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => handleSaveEditTitle(row)}
+            >
+              Save
+            </Button>
+          </div>
+        ) : (
+          row.title
+        );
+      },
     },
     {
       name: "Todo",
@@ -63,13 +107,23 @@ export default function Dashboard() {
       sortable: true,
     },
     {
-      name: " ",
+      name: "Edit Title",
       cell: (row: typeof tableData) => {
         return (
           <button
-            className="opacity-0 hover:opacity-100 transition-opacity duration-300"
-            onClick={() => handleDeleteProject(row)}
+            className="text-gray-500"
+            onClick={() => handleEditTitle(row)}
           >
+            <SquarePen />
+          </button>
+        );
+      },
+    },
+    {
+      name: "Delete",
+      cell: (row: typeof tableData) => {
+        return (
+          <button onClick={() => handleDeleteProject(row)}>
             <Bin />
           </button>
         );
@@ -92,17 +146,14 @@ export default function Dashboard() {
     setUserData(updatedUserData);
     window.localStorage.setItem("userData", JSON.stringify(updatedUserData));
     try {
-      await axios.patch(
-        `${baseURL}/users/${userData.id}`,
-        updatedUserData
-      );
+      await axios.patch(`${baseURL}/users/${userData.id}`, updatedUserData);
     } catch (error) {
       console.error("Error adding project:", error);
     }
   };
 
   return (
-    <div className="flex flex-col gap-8 items-center justify-center mt-20">
+    <div className="flex flex-col gap-8 items-center justify-center my-20">
       <div className="flex justify-center items-center">
         <div className="text-5xl font-semibold rounded-full bg-muted size-24 flex justify-center items-center">
           {userData.name.charAt(0).toUpperCase()}
@@ -120,6 +171,8 @@ export default function Dashboard() {
           columns={dashboardColumns}
           data={tableData}
           pagination
+          paginationPerPage={5}
+          paginationRowsPerPageOptions={[5, 10, 15, 20, 25]}
           pointerOnHover
           highlightOnHover
           onRowClicked={handleRowClick}

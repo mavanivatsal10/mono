@@ -48,7 +48,7 @@ export default function CardDetailsEdit({
       endDate: z.date(),
       status: z.enum(["todo", "inProgress", "done"]),
     })
-    .refine((data) => data.endDate >= data.startDate, {
+    .refine((data) => data.endDate.getDate() >= data.startDate.getDate(), {
       message: "End date must be on or after start date",
       path: ["endDate"],
     });
@@ -225,7 +225,8 @@ export default function CardDetailsEdit({
                                 : ""
                             }
                             disabled={(date) =>
-                              date < form.getValues("startDate")
+                              date.getDate() <
+                              form.getValues("startDate").getDate()
                             }
                           />
                         </FormControl>

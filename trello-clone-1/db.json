@@ -528,27 +528,12 @@
       "position": "designer",
       "projects": [
         {
-          "id": "a000fe68-4b50-4928-a097-2554f0dfe9d2",
+          "id": "6051aee9-c594-4b04-be53-df77f9518693",
           "title": "New Project",
           "cards": {
             "todo": [],
             "inProgress": [],
-            "done": [
-              {
-                "id": "9a13c6c2-ebc1-45fe-ac10-82137d23a82b",
-                "title": "New Card",
-                "description": "",
-                "startDate": "2025-06-03T18:30:00.000Z",
-                "endDate": "2025-06-10T18:30:00.000Z"
-              },
-              {
-                "id": "92b2f4a2-a9fe-45d8-b0bd-d443fd12736f",
-                "title": "New Card",
-                "description": "",
-                "startDate": "2025-06-11T18:30:00.000Z",
-                "endDate": "2025-06-11T18:30:00.000Z"
-              }
-            ]
+            "done": []
           }
         }
       ]

@@ -8,12 +8,12 @@ import {
   type DragOverEvent,
 } from "@dnd-kit/core";
 import Column from "./Column";
-import deepcopy from "deepcopy";
 import Filter from "./Filter";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { useContext } from "react";
 import axios from "axios";
+import { ArrowLeft } from "lucide-react";
 
 export default function Kanban({ columns, setColumns }) {
   const mouseSensor = useSensor(MouseSensor, {
@@ -24,6 +24,7 @@ export default function Kanban({ columns, setColumns }) {
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
   const { projectId } = useParams();
   const { userData, baseURL, setUserData } = useContext(GlobalContext);
+  const navigate = useNavigate();
 
   const handleDragOver = async (e: DragOverEvent) => {
     if (
@@ -159,6 +160,13 @@ export default function Kanban({ columns, setColumns }) {
 
   return (
     <div className="m-4 sleect-none">
+      <div
+        className="flex gap-2 text-gray-500 cursor-pointer select-none"
+        onClick={() => navigate("/")}
+      >
+        <ArrowLeft />
+        <p>Go back to the dashboard</p>
+      </div>
       <Filter columns={columns} setColumns={setColumns} />
       <DndContext onDragOver={handleDragOver} sensors={sensors}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -173,6 +181,9 @@ export default function Kanban({ columns, setColumns }) {
           ))}
         </div>
       </DndContext>
+      <div className="flex justify-center items-center my-8 text-gray-500">
+        Signed in as: {userData.name} | {userData.email}
+      </div>
     </div>
   );
 }
