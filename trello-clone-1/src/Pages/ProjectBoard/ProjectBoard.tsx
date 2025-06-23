@@ -1,12 +1,12 @@
 import CardDetails from "@/pages/ProjectBoard/components/CardDetails";
 import Kanban from "@/Pages/ProjectBoard/components/Board";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
-import { useContext, useState } from "react";
+import { use, useContext, useEffect, useState } from "react";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { useParams } from "react-router-dom";
 
 export default function ProjectBoard() {
-  const { showOverlay, setShowOverlay, selectedCard, setSelectedCard } =
+  const { showOverlay, setShowOverlay, selectedCard, setSelectedCard, filter } =
     useContext(ProjectBoardContext);
   const { userData } = useContext(GlobalContext);
   const { projectId } = useParams();

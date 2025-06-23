@@ -8,70 +8,62 @@
       "position": "developer",
       "projects": [
         {
-          "id": "65f0d39d-b6db-4251-b564-711c2480df56",
-          "title": "New Project",
+          "id": "959f1170-462d-440c-b09e-508aebda922a",
+          "title": "New Project test",
           "cards": {
             "todo": [
               {
-                "id": "3f45cf64-eb9f-46bd-8af3-867a070037d8",
-                "title": "New Card",
+                "id": "9366413e-c7e7-4605-a1cc-1f8bed178a16",
+                "title": "overdue !done",
                 "description": "",
-                "startDate": "2025-06-20T19:24:52.653Z",
-                "endDate": "2025-06-27T19:24:52.653Z"
+                "startDate": "2025-06-09T18:30:00.000Z",
+                "endDate": "2025-06-09T18:30:00.000Z"
               },
               {
-                "id": "b476a24d-1015-49c1-9e09-8e291caff32e",
-                "title": "New Card",
+                "id": "950f7d73-e5d2-4f88-850a-0a81eb6dbd93",
+                "title": "overdue done",
                 "description": "",
-                "startDate": "2025-06-20T19:24:53.771Z",
-                "endDate": "2025-06-27T19:24:53.771Z"
+                "startDate": "2025-06-06T18:30:00.000Z",
+                "endDate": "2025-06-09T18:30:00.000Z"
+              },
+              {
+                "id": "842817e2-0304-47eb-9e16-a1b45e199a51",
+                "title": "week !done",
+                "description": "",
+                "startDate": "2025-06-13T18:30:00.000Z",
+                "endDate": "2025-06-16T18:30:00.000Z"
               }
             ],
             "inProgress": [
               {
-                "id": "3e1e563d-115f-49c9-8912-9662ff99907a",
-                "title": "New Card",
+                "id": "15edecc1-0acc-46e3-9196-993e4380db6d",
+                "title": "tom done",
                 "description": "",
-                "startDate": "2025-06-20T19:24:51.403Z",
-                "endDate": "2025-06-27T19:24:51.403Z"
-              }
-            ],
-            "done": []
-          }
-        },
-        {
-          "id": "959f1170-462d-440c-b09e-508aebda922a",
-          "title": "New Project",
-          "cards": {
-            "todo": [],
-            "inProgress": [
+                "startDate": "2025-06-23T04:50:42.894Z",
+                "endDate": "2025-06-23T18:30:00.000Z"
+              },
               {
-                "id": "294ae289-ad2a-4507-9987-fb7391527090",
-                "title": "New Card",
+                "id": "48e7aeae-2b76-4f88-b815-ecb6c9d93aec",
+                "title": "today !done",
                 "description": "",
-                "startDate": "2025-06-20T19:25:07.569Z",
-                "endDate": "2025-06-27T19:25:07.569Z"
+                "startDate": "2025-06-23T04:50:08.614Z",
+                "endDate": "2025-06-22T18:30:00.000Z"
               }
             ],
             "done": [
               {
-                "id": "883f62c6-f68f-4e48-a473-40a0bd639dac",
-                "title": "New Card",
+                "id": "38d1d76a-f3f0-46ea-81b8-d894b395c321",
+                "title": "today done",
                 "description": "",
-                "startDate": "2025-06-20T19:25:09.437Z",
-                "endDate": "2025-06-27T19:25:09.437Z"
-              },
-              {
-                "id": "f8a1f6d2-e5a1-4d46-bfa1-c0c4649d8425",
-                "title": "New Card",
-                "description": "",
-                "startDate": "2025-06-20T19:25:10.903Z",
-                "endDate": "2025-06-27T19:25:10.903Z"
+                "startDate": "2025-06-23T04:50:25.206Z",
+                "endDate": "2025-06-22T18:30:00.000Z"
               }
             ]
           }
         }
-      ]
+      ],
+      "startDate": null,
+      "endDate": null
     },
     {
       "id": "0c8727aa-957a-49eb-81f8-152fbcb372f8",

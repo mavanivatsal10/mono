@@ -4,7 +4,16 @@ import Plus from "@/icons/Plus";
 import { v4 as uuidv4 } from "uuid";
 import { useContext } from "react";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
-import { addDays, endOfDay, isBefore, isToday, startOfDay } from "date-fns";
+import {
+  addDays,
+  endOfDay,
+  isAfter,
+  isBefore,
+  isEqual,
+  isToday,
+  isTomorrow,
+  startOfDay,
+} from "date-fns";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import axios from "axios";
 import { useParams } from "react-router-dom";
@@ -54,28 +63,41 @@ export default function Column({ title, cards, setColumns, columns }) {
     await updateUserObject(userData.id, updatedUserData);
   };
 
+  console.log(filter);
+
   const filteredCards = cards.filter((card) => {
-    const endDate = startOfDay(new Date(card.endDate));
-    const today = startOfDay(new Date());
+    const endDay = endOfDay(new Date(card.endDate));
+    const today = endOfDay(new Date());
     let numAddDays = 0;
+
+    const findColumn = () => {
+      for (const key in columns) {
+        if (columns[key].some((c) => c.id === card.id)) {
+          return key;
+        }
+      }
+    };
 
     if (filter === "all") return true;
     else if (filter === "overdue") {
-      return isBefore(endDate, today);
+      return isBefore(endDay, today) && findColumn() !== "done";
     } else if (filter === "today") {
-      return isToday(endDate);
+      return isToday(endDay) && findColumn() !== "done";
     } else if (filter === "tomorrow") {
-      numAddDays = 1;
+      return isTomorrow(endDay) && findColumn() !== "done";
     } else if (filter === "week") {
       numAddDays = 7;
     } else if (filter === "month") {
       numAddDays = 30;
     }
 
-    const notOverdue = !isBefore(endDate, today);
-    const dueDay = endOfDay(addDays(today, numAddDays));
-    console.log(dueDay);
-    return notOverdue && isBefore(endDate, dueDay);
+    // check if the card is due in the next numAddDays days
+    // should not be overdue and should not be in the done column
+    const isDone = findColumn() === "done";
+    const isOverdue = isBefore(endDay, today);
+    const dueIn = endOfDay(addDays(today, numAddDays));
+    console.log(card.title, `isOverdue: ${isOverdue}, isNotDone: ${isDone}`);
+    return !(isDone || isOverdue || isAfter(endDay, dueIn));
   });
 
   return (

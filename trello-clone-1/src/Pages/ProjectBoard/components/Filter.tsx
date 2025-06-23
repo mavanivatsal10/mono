@@ -7,17 +7,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { ProjectBoardContext } from "@/contexts/ProjectBoardContext";
 
 export default function Filter() {
   const { setFilter } = useContext(ProjectBoardContext);
 
+  useEffect(() => {
+    const filter = window.localStorage.getItem("filter");
+    if (filter) setFilter(filter);
+  }, []);
+
   return (
     <div className="flex items-center justify-center mb-4 gap-4">
       <p className="text-gray-700">Filter by: </p>
       <div className="select-none">
-        <Select onValueChange={(value) => setFilter(value)}>
+        <Select
+          defaultValue={window.localStorage.getItem("filter")}
+          onValueChange={(value) => {
+            window.localStorage.setItem("filter", value);
+            setFilter(value);
+          }}
+        >
           <SelectTrigger className="w-50">
             <SelectValue placeholder="Select a filter" />
           </SelectTrigger>

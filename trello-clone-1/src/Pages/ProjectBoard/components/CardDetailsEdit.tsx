@@ -19,7 +19,7 @@ import deepcopy from "deepcopy";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { GlobalContext } from "@/contexts/GlobalContext";
 import { useParams } from "react-router-dom";
-import { isBefore, startOfDay } from "date-fns";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 import { updateUserObject } from "@/api/user";
 
 export default function CardDetailsEdit({
@@ -125,6 +125,14 @@ export default function CardDetailsEdit({
     };
   }, []);
 
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  useEffect(() => {
+    if (startDate && endDate && startDate > endDate) {
+      form.setValue("endDate", undefined);
+    }
+  }, [startDate, endDate]);
+
   return (
     <div className="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center">
       <div className="min-h-1/2 w-full m-4 p-6 max-h-screen md:m-0 md:w-1/2 bg-white rounded-2xl shadow-2xl flex flex-col gap-4">
@@ -189,7 +197,9 @@ export default function CardDetailsEdit({
                         <FormControl>
                           <DatePicker
                             date={form.getValues("startDate")}
-                            setDate={(date) => form.setValue("startDate", date)}
+                            setDate={(date) => {
+                              form.setValue("startDate", date);
+                            }}
                             ref={startDateRef}
                             className={
                               form.formState.errors.startDate
@@ -223,8 +233,10 @@ export default function CardDetailsEdit({
                             }
                             disabled={(date) => {
                               const day = startOfDay(date);
-                              const today = startOfDay(new Date());
-                              return isBefore(day, today);
+                              const startDay = startOfDay(
+                                form.getValues("startDate")
+                              );
+                              return isBefore(day, startDay);
                             }}
                           />
                         </FormControl>
