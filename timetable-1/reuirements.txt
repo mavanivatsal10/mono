@@ -1,0 +1,5 @@
+01. user can add title and desc to slots
+02. calender like ui
+03. different slots for different days
+04. user can add full leave or half leave
+05. user can add short leave: from time - to time

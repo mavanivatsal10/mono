@@ -102,19 +102,15 @@ export default function UserInput({ slots, setSlots }) {
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      startTime: "",
-      endTime: "",
-      breakStartTime: "",
-      breakEndTime: "",
-      slotDuration: "",
+      startTime: "09:00",
+      endTime: "18:30",
+      breakStartTime: "13:00",
+      breakEndTime: "13:45",
+      slotDuration: "60",
     },
   });
 
   const generateSlots = (data: any) => {
-    // beforeBreak = calculate minutes between start and break start
-    // afterBreak = calculate minutes between break end and end time
-    // num slots = total minutes / slot duration
-    // # slots before break = floor(before break minutes / slot duration)
     const getTimeNumsFromString = (time: string) =>
       time.split(":").map((t) => Number(t));
     const getTimeStringFromNums = (hour: number, minute: number) => {
@@ -147,8 +143,7 @@ export default function UserInput({ slots, setSlots }) {
     const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
     const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
 
-    let temp = deepcopy(slots);
-    if (temp === null) temp = [];
+    const temp = [];
 
     // generate slots before break
     for (let i = 0; i < numSlotsBeforeBreak; i++) {
@@ -194,13 +189,13 @@ export default function UserInput({ slots, setSlots }) {
     // generate slots after break
     for (let i = 0; i < numSlotsAfterBreak; i++) {
       const [slotStartHour, slotStartMinute] = addMinutes(
-        breakStartHour,
-        breakStartMinute,
+        breakEndHour,
+        breakEndMinute,
         i * slotMinutes
       );
       const [slotEndHour, slotEndMinute] = addMinutes(
-        breakStartHour,
-        breakStartMinute,
+        breakEndHour,
+        breakEndMinute,
         (i + 1) * slotMinutes
       );
 
@@ -225,7 +220,6 @@ export default function UserInput({ slots, setSlots }) {
       });
     }
 
-    console.log(temp);
     setSlots(temp);
   };
 
