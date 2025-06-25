@@ -10,9 +10,12 @@ export default function App() {
 
   return (
     <div>
-      <Calendar slots={slots} />
       <UserInput setSlots={setSlots} slots={slots} />
-      {slots && <Slots slots={slots} />}
+      {slots && (
+        <div className="flex justify-center items-center m-16">
+          <Calendar slots={slots} />
+        </div>
+      )}
     </div>
   );
 }

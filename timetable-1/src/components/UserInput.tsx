@@ -12,6 +12,9 @@ import { Button } from "./ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { compareTime } from "@/lib/utils";
+import DatePicker from "@/components/ui/date-picker";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 
 export default function UserInput({ slots, setSlots }) {
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -23,7 +26,8 @@ export default function UserInput({ slots, setSlots }) {
     .object({
       title: z.string().min(1, "Title is required"),
       description: z.string(),
-      date: z.string(),
+      date: z.date().nullable(),
+      isDefault: z.boolean().optional(),
       startTime: timeSchema,
       endTime: timeSchema,
       breakStartTime: timeSchema,
@@ -99,6 +103,15 @@ export default function UserInput({ slots, setSlots }) {
         message: "Slot duration must be greater than 0",
         path: ["slotDuration"],
       }
+    )
+    .refine(
+      (data) => {
+        return data.date !== null || data.isDefault;
+      },
+      {
+        message: "Either select a slot date or make it as default slot value",
+        path: ["slotDateError"],
+      }
     );
 
   const form = useForm({
@@ -106,6 +119,8 @@ export default function UserInput({ slots, setSlots }) {
     defaultValues: {
       title: "Timetable",
       description: "",
+      date: new Date(),
+      isDefault: true,
       startTime: "09:00",
       endTime: "18:30",
       breakStartTime: "13:00",
@@ -113,6 +128,8 @@ export default function UserInput({ slots, setSlots }) {
       slotDuration: "60",
     },
   });
+
+  console.log(form.formState.errors);
 
   const generateSlots = (data: any) => {
     const getTimeNumsFromString = (time: string) =>
@@ -147,7 +164,7 @@ export default function UserInput({ slots, setSlots }) {
     const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
     const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
 
-    const temp = [];
+    const generatedSlots = [];
 
     // generate slots before break
     for (let i = 0; i < numSlotsBeforeBreak; i++) {
@@ -167,7 +184,7 @@ export default function UserInput({ slots, setSlots }) {
         slotStartMinute
       );
       const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
-      temp.push({
+      generatedSlots.push({
         title: `Slot ${i + 1}`,
         description: "",
         startTime: slotStartTime,
@@ -177,18 +194,20 @@ export default function UserInput({ slots, setSlots }) {
     }
 
     // add buffer if last slot ends before break
-    if (temp[temp.length - 1].endTime !== data.breakStartTime) {
-      temp.push({
+    if (
+      generatedSlots[generatedSlots.length - 1].endTime !== data.breakStartTime
+    ) {
+      generatedSlots.push({
         title: `Buffer`,
         description: "",
-        startTime: temp[temp.length - 1].endTime,
+        startTime: generatedSlots[generatedSlots.length - 1].endTime,
         endTime: data.breakStartTime,
         type: "buffer",
       });
     }
 
     // generate break
-    temp.push({
+    generatedSlots.push({
       title: "Break",
       description: "",
       startTime: data.breakStartTime,
@@ -214,7 +233,7 @@ export default function UserInput({ slots, setSlots }) {
         slotStartMinute
       );
       const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
-      temp.push({
+      generatedSlots.push({
         title: `Slot ${numSlotsBeforeBreak + i + 1}`,
         description: "",
         startTime: slotStartTime,
@@ -224,17 +243,23 @@ export default function UserInput({ slots, setSlots }) {
     }
 
     // add buffer if last slot ends before day end
-    if (temp[temp.length - 1].endTime !== data.endTime) {
-      temp.push({
+    if (generatedSlots[generatedSlots.length - 1].endTime !== data.endTime) {
+      generatedSlots.push({
         title: `Buffer`,
         description: "",
-        startTime: temp[temp.length - 1].endTime,
+        startTime: generatedSlots[generatedSlots.length - 1].endTime,
         endTime: data.endTime,
         type: "buffer",
       });
     }
 
-    setSlots(temp);
+    const addedData = generatedSlots.map((slot) => ({
+      ...slot,
+      date: data.date,
+      // todo: add userId here
+    }));
+
+    setSlots(addedData);
   };
 
   return (
@@ -244,23 +269,6 @@ export default function UserInput({ slots, setSlots }) {
         className="p-4 flex items-center justify-center"
       >
         <div className="flex flex-col items-center justify-center gap-8">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem className="w-75">
-                <FormLabel>Date</FormLabel>
-                <FormControl>
-                  {/* <Input
-                    type="number"
-                    {...field}
-                    className="flex items-center justify-center"
-                  /> */}
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <div className="flex gap-8">
             <FormField
               control={form.control}
@@ -333,26 +341,70 @@ export default function UserInput({ slots, setSlots }) {
               )}
             />
           </div>
+          <div className="flex gap-8">
+            <FormField
+              control={form.control}
+              name="slotDuration"
+              render={({ field }) => (
+                <FormItem className="w-75">
+                  <FormLabel>
+                    Duration per Slot
+                    <span className="font-normal">(in minutes)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      className="flex items-center justify-center"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="w-75">
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <DatePicker {...field} disabled={form.watch("isDefault")} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={form.control}
-            name="slotDuration"
+            name="isDefault"
             render={({ field }) => (
-              <FormItem className="w-75">
-                <FormLabel>
-                  Duration per Slot
-                  <span className="font-normal">(in minutes)</span>
-                </FormLabel>
+              <FormItem className="w-full">
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    className="flex items-center justify-center"
-                  />
+                  <div className="flex gap-2 items-center">
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      id="set-default-slot-values"
+                    />
+                    <Label
+                      className="font-normal"
+                      htmlFor="set-default-slot-values"
+                    >
+                      Set these slots as default slots
+                    </Label>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          {form.formState.errors.slotDateError && (
+            <p className="text-red-500">
+              {form.formState.errors.slotDateError.message}
+            </p>
+          )}
           <Button type="submit" className="w-fit">
             Generate Slots
           </Button>
