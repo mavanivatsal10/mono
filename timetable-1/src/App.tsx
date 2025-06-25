@@ -1,6 +1,5 @@
 import { useState } from "react";
 import UserInput from "./components/UserInput";
-import Slots from "./components/Slots";
 import Calendar from "./components/Calendar";
 
 export default function App() {

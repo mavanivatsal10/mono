@@ -15,6 +15,8 @@ import { compareTime } from "@/lib/utils";
 import DatePicker from "@/components/ui/date-picker";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
+import { useEffect } from "react";
+import deepcopy from "deepcopy";
 
 export default function UserInput({ slots, setSlots }) {
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -26,7 +28,7 @@ export default function UserInput({ slots, setSlots }) {
     .object({
       title: z.string().min(1, "Title is required"),
       description: z.string(),
-      date: z.date().nullable(),
+      date: z.union([z.date().nullable(), z.literal("default")]),
       isDefault: z.boolean().optional(),
       startTime: timeSchema,
       endTime: timeSchema,
@@ -129,7 +131,7 @@ export default function UserInput({ slots, setSlots }) {
     },
   });
 
-  console.log(form.formState.errors);
+  const watchIsDefault = form.watch("isDefault");
 
   const generateSlots = (data: any) => {
     const getTimeNumsFromString = (time: string) =>
@@ -164,7 +166,7 @@ export default function UserInput({ slots, setSlots }) {
     const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
     const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
 
-    const generatedSlots = [];
+    const generatedSlots = slots !== null ? deepcopy(slots) : [];
 
     // generate slots before break
     for (let i = 0; i < numSlotsBeforeBreak; i++) {
@@ -253,13 +255,51 @@ export default function UserInput({ slots, setSlots }) {
       });
     }
 
-    const addedData = generatedSlots.map((slot) => ({
-      ...slot,
-      date: data.date,
-      // todo: add userId here
-    }));
+    const addedData = generatedSlots.map((slot) => {
+      if (watchIsDefault) {
+        return {
+          date: "default",
+          title: slot.title,
+          description: slot.description,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          type: slot.type,
+          // todo: add userId here
+        };
+      } else {
+        const getDateObj = (timeString: string) => {
+          const [hour, minute] = getTimeNumsFromString(timeString);
+          const date = new Date(data.date);
+          date.setHours(hour);
+          date.setMinutes(minute);
+          return date;
+        };
+
+        return {
+          date: data.date,
+          title: slot.title,
+          description: slot.description,
+          start: getDateObj(slot.startTime),
+          end: getDateObj(slot.endTime),
+          type: slot.type,
+          // todo: add userId here
+        };
+      }
+    });
+
+    console.log(addedData);
 
     setSlots(addedData);
+  };
+
+  const getAllSlots = (data) => {
+    // todo
+    /**
+     * deepcopy slots
+     * generate new slots based on current form data
+     * push to slots copy and setSlots
+     */
+    const generateSlots = () => {};
   };
 
   return (
@@ -367,9 +407,13 @@ export default function UserInput({ slots, setSlots }) {
               name="date"
               render={({ field }) => (
                 <FormItem className="w-75">
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel
+                    className={watchIsDefault ? "text-muted-foreground" : ""}
+                  >
+                    Date
+                  </FormLabel>
                   <FormControl>
-                    <DatePicker {...field} disabled={form.watch("isDefault")} />
+                    <DatePicker {...field} disabled={watchIsDefault} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

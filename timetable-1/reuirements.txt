@@ -7,5 +7,6 @@
 ----------------------------
 
 - DONE: populate the entire calendar with the generated slots
-- user can add slots for a given day. calendar should update accordingly
+- DONE: user can add slots for a given day. calendar should update accordingly
+- user can ADD slots, not REPLACE them
 - user can edit the slots
