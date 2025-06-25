@@ -1,4 +1,4 @@
-import { set, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   Form,
   FormControl,
@@ -12,7 +12,6 @@ import { Button } from "./ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { compareTime } from "@/lib/utils";
-import deepcopy from "deepcopy";
 
 export default function UserInput({ slots, setSlots }) {
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -22,6 +21,9 @@ export default function UserInput({ slots, setSlots }) {
 
   const schema = z
     .object({
+      title: z.string().min(1, "Title is required"),
+      description: z.string(),
+      date: z.string(),
       startTime: timeSchema,
       endTime: timeSchema,
       breakStartTime: timeSchema,
@@ -102,6 +104,8 @@ export default function UserInput({ slots, setSlots }) {
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
+      title: "Timetable",
+      description: "",
       startTime: "09:00",
       endTime: "18:30",
       breakStartTime: "13:00",
@@ -164,6 +168,8 @@ export default function UserInput({ slots, setSlots }) {
       );
       const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
       temp.push({
+        title: `Slot ${i + 1}`,
+        description: "",
         startTime: slotStartTime,
         endTime: slotEndTime,
         type: "slot",
@@ -173,6 +179,8 @@ export default function UserInput({ slots, setSlots }) {
     // add buffer if last slot ends before break
     if (temp[temp.length - 1].endTime !== data.breakStartTime) {
       temp.push({
+        title: `Buffer`,
+        description: "",
         startTime: temp[temp.length - 1].endTime,
         endTime: data.breakStartTime,
         type: "buffer",
@@ -181,6 +189,8 @@ export default function UserInput({ slots, setSlots }) {
 
     // generate break
     temp.push({
+      title: "Break",
+      description: "",
       startTime: data.breakStartTime,
       endTime: data.breakEndTime,
       type: "break",
@@ -205,6 +215,8 @@ export default function UserInput({ slots, setSlots }) {
       );
       const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
       temp.push({
+        title: `Slot ${numSlotsBeforeBreak + i + 1}`,
+        description: "",
         startTime: slotStartTime,
         endTime: slotEndTime,
         type: "slot",
@@ -214,6 +226,8 @@ export default function UserInput({ slots, setSlots }) {
     // add buffer if last slot ends before day end
     if (temp[temp.length - 1].endTime !== data.endTime) {
       temp.push({
+        title: `Buffer`,
+        description: "",
         startTime: temp[temp.length - 1].endTime,
         endTime: data.endTime,
         type: "buffer",
@@ -230,6 +244,23 @@ export default function UserInput({ slots, setSlots }) {
         className="p-4 flex items-center justify-center"
       >
         <div className="flex flex-col items-center justify-center gap-8">
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="w-75">
+                <FormLabel>Date</FormLabel>
+                <FormControl>
+                  {/* <Input
+                    type="number"
+                    {...field}
+                    className="flex items-center justify-center"
+                  /> */}
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <div className="flex gap-8">
             <FormField
               control={form.control}

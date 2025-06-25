@@ -3,3 +3,9 @@
 03. different slots for different days
 04. user can add full leave or half leave
 05. user can add short leave: from time - to time
+
+----------------------------
+
+- DONE: populate the entire calendar with the generated slots
+- user can add slots for a given day. calendar should update accordingly
+- user can edit the slots
