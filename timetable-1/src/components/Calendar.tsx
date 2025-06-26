@@ -3,6 +3,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { v4 as uuidv4 } from "uuid";
 import "../index.css";
+import { useEffect } from "react";
 
 export default function Calendar({ slots }) {
   const transformSlotsToEvents = (slot) => {
@@ -21,7 +22,7 @@ export default function Calendar({ slots }) {
         date: slot.date,
       },
     };
-    if (slot.startTime) {
+    if (slot.date === "default") {
       return {
         ...event,
         startTime: slot.startTime,
@@ -35,6 +36,29 @@ export default function Calendar({ slots }) {
       };
     }
   };
+
+  // adjust popover position if it goes out of the viewport
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const popoverEl = document.querySelector(".fc-popover");
+
+      if (popoverEl) {
+        const rect = popoverEl.getBoundingClientRect();
+
+        if (rect.bottom > window.innerHeight) {
+          const newTop = rect.top - rect.height - 10;
+          popoverEl.style.top = `${newTop}px`;
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div>

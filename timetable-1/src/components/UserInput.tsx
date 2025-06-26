@@ -133,7 +133,15 @@ export default function UserInput({ slots, setSlots }) {
 
   const watchIsDefault = form.watch("isDefault");
 
-  const generateSlots = (data: any) => {
+  const getAllSlots = (data) => {
+    // todo
+    /**
+     * deepcopy slots
+     * generate new slots based on current form data
+     * push to slots copy or replace default slots and then setSlots
+     */
+
+    // helper functions
     const getTimeNumsFromString = (time: string) =>
       time.split(":").map((t) => Number(t));
     const getTimeStringFromNums = (hour: number, minute: number) => {
@@ -148,6 +156,7 @@ export default function UserInput({ slots, setSlots }) {
       return [newHour, newMinute];
     };
 
+    // form values
     const [startHour, startMinute] = getTimeNumsFromString(data.startTime);
     const [endHour, endMinute] = getTimeNumsFromString(data.endTime);
     const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
@@ -156,156 +165,166 @@ export default function UserInput({ slots, setSlots }) {
     const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
       data.breakEndTime
     );
-
     const beforeBreakMinutes =
       (breakStartHour - startHour) * 60 + breakStartMinute - startMinute;
     const afterBreakMinutes =
       (endHour - breakEndHour) * 60 + endMinute - breakEndMinute;
     const slotMinutes = parseInt(data.slotDuration);
-
     const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
     const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
 
-    const generatedSlots = slots !== null ? deepcopy(slots) : [];
+    const generateNewSlots = () => {
+      const newSlots = [];
 
-    // generate slots before break
-    for (let i = 0; i < numSlotsBeforeBreak; i++) {
-      const [slotStartHour, slotStartMinute] = addMinutes(
-        startHour,
-        startMinute,
-        i * slotMinutes
-      );
-      const [slotEndHour, slotEndMinute] = addMinutes(
-        startHour,
-        startMinute,
-        (i + 1) * slotMinutes
-      );
+      // generate slots before break
+      for (let i = 0; i < numSlotsBeforeBreak; i++) {
+        const [slotStartHour, slotStartMinute] = addMinutes(
+          startHour,
+          startMinute,
+          i * slotMinutes
+        );
+        const [slotEndHour, slotEndMinute] = addMinutes(
+          startHour,
+          startMinute,
+          (i + 1) * slotMinutes
+        );
 
-      const slotStartTime = getTimeStringFromNums(
-        slotStartHour,
-        slotStartMinute
-      );
-      const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
-      generatedSlots.push({
-        title: `Slot ${i + 1}`,
-        description: "",
-        startTime: slotStartTime,
-        endTime: slotEndTime,
-        type: "slot",
-      });
-    }
-
-    // add buffer if last slot ends before break
-    if (
-      generatedSlots[generatedSlots.length - 1].endTime !== data.breakStartTime
-    ) {
-      generatedSlots.push({
-        title: `Buffer`,
-        description: "",
-        startTime: generatedSlots[generatedSlots.length - 1].endTime,
-        endTime: data.breakStartTime,
-        type: "buffer",
-      });
-    }
-
-    // generate break
-    generatedSlots.push({
-      title: "Break",
-      description: "",
-      startTime: data.breakStartTime,
-      endTime: data.breakEndTime,
-      type: "break",
-    });
-
-    // generate slots after break
-    for (let i = 0; i < numSlotsAfterBreak; i++) {
-      const [slotStartHour, slotStartMinute] = addMinutes(
-        breakEndHour,
-        breakEndMinute,
-        i * slotMinutes
-      );
-      const [slotEndHour, slotEndMinute] = addMinutes(
-        breakEndHour,
-        breakEndMinute,
-        (i + 1) * slotMinutes
-      );
-
-      const slotStartTime = getTimeStringFromNums(
-        slotStartHour,
-        slotStartMinute
-      );
-      const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
-      generatedSlots.push({
-        title: `Slot ${numSlotsBeforeBreak + i + 1}`,
-        description: "",
-        startTime: slotStartTime,
-        endTime: slotEndTime,
-        type: "slot",
-      });
-    }
-
-    // add buffer if last slot ends before day end
-    if (generatedSlots[generatedSlots.length - 1].endTime !== data.endTime) {
-      generatedSlots.push({
-        title: `Buffer`,
-        description: "",
-        startTime: generatedSlots[generatedSlots.length - 1].endTime,
-        endTime: data.endTime,
-        type: "buffer",
-      });
-    }
-
-    const addedData = generatedSlots.map((slot) => {
-      if (watchIsDefault) {
-        return {
-          date: "default",
-          title: slot.title,
-          description: slot.description,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          type: slot.type,
-          // todo: add userId here
-        };
-      } else {
-        const getDateObj = (timeString: string) => {
-          const [hour, minute] = getTimeNumsFromString(timeString);
-          const date = new Date(data.date);
-          date.setHours(hour);
-          date.setMinutes(minute);
-          return date;
-        };
-
-        return {
-          date: data.date,
-          title: slot.title,
-          description: slot.description,
-          start: getDateObj(slot.startTime),
-          end: getDateObj(slot.endTime),
-          type: slot.type,
-          // todo: add userId here
-        };
+        const slotStartTime = getTimeStringFromNums(
+          slotStartHour,
+          slotStartMinute
+        );
+        const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
+        newSlots.push({
+          title: `Slot ${i + 1}`,
+          description: "",
+          start: slotStartTime,
+          end: slotEndTime,
+          type: "slot",
+        });
       }
-    });
 
-    console.log(addedData);
+      // add buffer if last slot ends before break
+      if (newSlots[newSlots.length - 1].end !== data.breakStartTime) {
+        newSlots.push({
+          title: `Buffer`,
+          description: "",
+          start: newSlots[newSlots.length - 1].end,
+          end: data.breakStartTime,
+          type: "buffer",
+        });
+      }
 
-    setSlots(addedData);
-  };
+      // generate break
+      newSlots.push({
+        title: "Break",
+        description: "",
+        start: data.breakStartTime,
+        end: data.breakEndTime,
+        type: "break",
+      });
 
-  const getAllSlots = (data) => {
-    // todo
-    /**
-     * deepcopy slots
-     * generate new slots based on current form data
-     * push to slots copy and setSlots
-     */
-    const generateSlots = () => {};
+      // generate slots after break
+      for (let i = 0; i < numSlotsAfterBreak; i++) {
+        const [slotStartHour, slotStartMinute] = addMinutes(
+          breakEndHour,
+          breakEndMinute,
+          i * slotMinutes
+        );
+        const [slotEndHour, slotEndMinute] = addMinutes(
+          breakEndHour,
+          breakEndMinute,
+          (i + 1) * slotMinutes
+        );
+
+        const slotStartTime = getTimeStringFromNums(
+          slotStartHour,
+          slotStartMinute
+        );
+        const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
+        newSlots.push({
+          title: `Slot ${numSlotsBeforeBreak + i + 1}`,
+          description: "",
+          start: slotStartTime,
+          end: slotEndTime,
+          type: "slot",
+        });
+      }
+
+      // add buffer if last slot ends before day end
+      if (newSlots[newSlots.length - 1].end !== data.endTime) {
+        newSlots.push({
+          title: `Buffer`,
+          description: "",
+          start: newSlots[newSlots.length - 1].end,
+          end: data.endTime,
+          type: "buffer",
+        });
+      }
+      return newSlots;
+    };
+
+    const newSlots = generateNewSlots();
+
+    let updatedNewSlots;
+    if (watchIsDefault) {
+      updatedNewSlots = newSlots.map((slot) => {
+        return {
+          title: slot.title,
+          description: slot.description,
+          startTime: slot.start,
+          endTime: slot.end,
+          type: slot.type,
+          date: "default",
+        };
+      });
+    } else {
+      updatedNewSlots = newSlots.map((slot) => {
+        const date = new Date(data.date);
+        const startTime = date.setHours(
+          Number(slot.start.split(":")[0]),
+          Number(slot.start.split(":")[1]),
+          0
+        );
+        const endTime = date.setHours(
+          Number(slot.end.split(":")[0]),
+          Number(slot.end.split(":")[1]),
+          0
+        );
+        return {
+          title: slot.title,
+          description: slot.description,
+          start: startTime,
+          end: endTime,
+          type: slot.type,
+          date: data.date,
+        };
+      });
+    }
+
+    const currentSlots = deepcopy(slots);
+
+    if (currentSlots === null) {
+      setSlots(updatedNewSlots);
+      return;
+    }
+
+    // append new slots if user adds slots for a given day else replace default slots
+    if (watchIsDefault) {
+      const cleanCurrentSlots = currentSlots.filter(
+        (slot) => slot.date !== "default"
+      );
+      console.log([...cleanCurrentSlots, ...updatedNewSlots]);
+      setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
+    } else {
+      setSlots([...currentSlots, ...updatedNewSlots]);
+      console.log([...currentSlots, ...updatedNewSlots]);
+    }
   };
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(generateSlots)}
+        onSubmit={form.handleSubmit(getAllSlots)}
         className="p-4 flex items-center justify-center"
       >
         <div className="flex flex-col items-center justify-center gap-8">
@@ -314,7 +333,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="startTime"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel>Start Time</FormLabel>
                   <FormControl>
                     <Input
@@ -331,7 +350,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="endTime"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel>End Time</FormLabel>
                   <FormControl>
                     <Input
@@ -350,7 +369,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="breakStartTime"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel>Break Start Time</FormLabel>
                   <FormControl>
                     <Input
@@ -367,7 +386,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="breakEndTime"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel>Break End Time</FormLabel>
                   <FormControl>
                     <Input
@@ -386,7 +405,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="slotDuration"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel>
                     Duration per Slot
                     <span className="font-normal">(in minutes)</span>
@@ -406,7 +425,7 @@ export default function UserInput({ slots, setSlots }) {
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem className="w-75">
+                <FormItem className="w-50">
                   <FormLabel
                     className={watchIsDefault ? "text-muted-foreground" : ""}
                   >
@@ -449,9 +468,7 @@ export default function UserInput({ slots, setSlots }) {
               {form.formState.errors.slotDateError.message}
             </p>
           )}
-          <Button type="submit" className="w-fit">
-            Generate Slots
-          </Button>
+          <Button type="submit">Generate Slots</Button>
         </div>
       </form>
     </Form>
