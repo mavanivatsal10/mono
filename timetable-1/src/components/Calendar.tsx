@@ -4,37 +4,44 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { v4 as uuidv4 } from "uuid";
 import "../index.css";
 import { useEffect } from "react";
+import { format } from "date-fns";
 
 export default function Calendar({ slots }) {
-  const transformSlotsToEvents = (slot) => {
-    const event = {
-      id: uuidv4(),
-      title: slot.title,
-      color:
-        slot.type === "slot"
-          ? "var(--chart-2)"
-          : slot.type === "break"
-          ? "var(--chart-1)"
-          : "var(--chart-4)",
-      extendedProps: {
-        type: slot.type,
-        description: slot.description,
-        date: slot.date,
-      },
-    };
-    if (slot.date === "default") {
-      return {
-        ...event,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      };
-    } else {
-      return {
-        ...event,
-        start: slot.start,
-        end: slot.end,
-      };
+  // Helper: Get dates with specific events
+  const getSpecificDates = (eventList) =>
+    new Set(eventList.filter((e) => e.date !== "default").map((e) => e.date));
+
+  const getEvents = (info) => {
+    // todo
+    /**
+     * generate a list of dates for which there are slots defined
+     * for each date in the visible range (info.start, info.end),
+     *     if there are events on that date, then push them
+     *     else push the default events
+     */
+
+    const start = info.start;
+    const end = info.end;
+    const specificDates = getSpecificDates(slots ?? []);
+
+    const generated = [];
+
+    for (
+      let date = new Date(start);
+      date <= end;
+      date.setDate(date.getDate() + 1)
+    ) {
+      const dateStr = format(date, "yyyy-MM-dd");
+
+      if (specificDates.has(dateStr)) {
+        const events = slots.filter(
+          (e) => e.date !== "default" && e.date === dateStr
+        );
+        generated.push(...events);
+      } else {
+      }
     }
+    return generated;
   };
 
   // adjust popover position if it goes out of the viewport
@@ -66,8 +73,7 @@ export default function Calendar({ slots }) {
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
-          events={slots}
-          eventDataTransform={transformSlotsToEvents}
+          events={getEvents}
           height={window.innerHeight - 90}
           headerToolbar={{
             left: "prev,next today",

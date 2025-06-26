@@ -17,6 +17,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { useEffect } from "react";
 import deepcopy from "deepcopy";
+import { format } from "date-fns";
 
 export default function UserInput({ slots, setSlots }) {
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -269,34 +270,15 @@ export default function UserInput({ slots, setSlots }) {
     if (watchIsDefault) {
       updatedNewSlots = newSlots.map((slot) => {
         return {
-          title: slot.title,
-          description: slot.description,
-          startTime: slot.start,
-          endTime: slot.end,
-          type: slot.type,
+          ...slot,
           date: "default",
         };
       });
     } else {
       updatedNewSlots = newSlots.map((slot) => {
-        const date = new Date(data.date);
-        const startTime = date.setHours(
-          Number(slot.start.split(":")[0]),
-          Number(slot.start.split(":")[1]),
-          0
-        );
-        const endTime = date.setHours(
-          Number(slot.end.split(":")[0]),
-          Number(slot.end.split(":")[1]),
-          0
-        );
         return {
-          title: slot.title,
-          description: slot.description,
-          start: startTime,
-          end: endTime,
-          type: slot.type,
-          date: data.date,
+          ...slot,
+          date: format(data.date, "yyyy-MM-dd"),
         };
       });
     }
@@ -308,16 +290,17 @@ export default function UserInput({ slots, setSlots }) {
       return;
     }
 
-    // append new slots if user adds slots for a given day else replace default slots
+    // find all events (slots) that are on the given day, and then replace them with new events (slots)
     if (watchIsDefault) {
       const cleanCurrentSlots = currentSlots.filter(
         (slot) => slot.date !== "default"
       );
-      console.log([...cleanCurrentSlots, ...updatedNewSlots]);
       setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
     } else {
-      setSlots([...currentSlots, ...updatedNewSlots]);
-      console.log([...currentSlots, ...updatedNewSlots]);
+      const cleanCurrentSlots = currentSlots.filter(
+        (slot) => slot.date !== format(data.date, "yyyy-MM-dd")
+      );
+      setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
     }
   };
 
