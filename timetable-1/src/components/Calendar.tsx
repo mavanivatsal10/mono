@@ -20,9 +20,13 @@ export default function Calendar({ slots }) {
      *     else push the default events
      */
 
+    if (slots === null) {
+      return [];
+    }
+
     const start = info.start;
     const end = info.end;
-    const specificDates = getSpecificDates(slots ?? []);
+    const specificDates = getSpecificDates(slots);
 
     const generated = [];
 
@@ -34,11 +38,30 @@ export default function Calendar({ slots }) {
       const dateStr = format(date, "yyyy-MM-dd");
 
       if (specificDates.has(dateStr)) {
-        const events = slots.filter(
-          (e) => e.date !== "default" && e.date === dateStr
-        );
-        generated.push(...events);
+        const eventsToday = slots.filter((s) => s.date === dateStr);
+        const eventList = eventsToday.map((e) => {
+          return {
+            id: uuidv4(),
+            title: e.title,
+            start: new Date(`${dateStr}T${e.start}:00`),
+            end: new Date(`${dateStr}T${e.end}:00`),
+            description: e.description,
+          };
+        });
+
+        generated.push(...eventList);
       } else {
+        const defaultEvents = slots.filter((slot) => slot.date === "default");
+        const eventList = defaultEvents.map((e) => {
+          return {
+            id: uuidv4(),
+            title: e.title,
+            start: new Date(`${dateStr}T${e.start}:00`),
+            end: new Date(`${dateStr}T${e.end}:00`),
+            description: e.description,
+          };
+        });
+        generated.push(...eventList);
       }
     }
     return generated;
@@ -73,7 +96,10 @@ export default function Calendar({ slots }) {
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
-          events={getEvents}
+          events={(info, onSuccess) => {
+            const events = getEvents(info);
+            onSuccess(events);
+          }}
           height={window.innerHeight - 90}
           headerToolbar={{
             left: "prev,next today",
