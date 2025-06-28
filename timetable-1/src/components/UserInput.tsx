@@ -291,17 +291,17 @@ export default function UserInput({ slots, setSlots }) {
     }
 
     // find all events (slots) that are on the given day, and then replace them with new events (slots)
+    let cleanCurrentSlots;
     if (watchIsDefault) {
-      const cleanCurrentSlots = currentSlots.filter(
+      cleanCurrentSlots = currentSlots.filter(
         (slot) => slot.date !== "default"
       );
-      setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
     } else {
-      const cleanCurrentSlots = currentSlots.filter(
+      cleanCurrentSlots = currentSlots.filter(
         (slot) => slot.date !== format(data.date, "yyyy-MM-dd")
       );
-      setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
     }
+    setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
   };
 
   return (
