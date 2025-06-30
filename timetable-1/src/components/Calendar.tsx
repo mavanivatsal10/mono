@@ -6,7 +6,7 @@ import "../index.css";
 import { useEffect } from "react";
 import { format } from "date-fns";
 
-export default function Calendar({ slots }) {
+export default function Calendar({ slots, setEditEvent, calendarRef }) {
   // Helper: Get dates with specific events
   const getSpecificDates = (eventList) =>
     new Set(eventList.filter((e) => e.date !== "default").map((e) => e.date));
@@ -90,16 +90,26 @@ export default function Calendar({ slots }) {
     return () => observer.disconnect();
   }, []);
 
+  const handleEventClick = (info) => {
+    info.jsEvent.stopPropagation();
+    setEditEvent({
+      showOverlay: true,
+      eventData: info.event,
+    });
+  };
+
   return (
     <div>
       <div className="w-200">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
           events={(info, onSuccess) => {
             const events = getEvents(info);
             onSuccess(events);
           }}
+          eventClick={handleEventClick}
           height={window.innerHeight - 90}
           headerToolbar={{
             left: "prev,next today",
