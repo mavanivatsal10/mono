@@ -15,12 +15,12 @@ export default function App() {
   // Re-fetch events when slots change
   useEffect(() => {
     if (calendarRef.current) {
-      calendarRef.current.getApi().refetchEvents();
+      calendarRef.current?.getApi().refetchEvents();
     }
   }, [slots]);
 
   return (
-    <div className="flex flex-col lg:flex-row items-center justify-center min-h-screen bg-gray-100 gap-8">
+    <div className="flex flex-col lg:flex-row items-center justify-center min-h-screen bg-gray-100 gap-8 lg:p-0 p-8">
       <div className="bg-white p-4 rounded-lg shadow-md h-fit w-fit">
         <UserInput setSlots={setSlots} slots={slots} />
       </div>

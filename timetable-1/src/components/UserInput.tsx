@@ -15,9 +15,9 @@ import { compareTime } from "@/lib/utils";
 import DatePicker from "@/components/ui/date-picker";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
-import { useEffect } from "react";
 import deepcopy from "deepcopy";
 import { format } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
 
 export default function UserInput({ slots, setSlots }) {
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -135,7 +135,6 @@ export default function UserInput({ slots, setSlots }) {
   const watchIsDefault = form.watch("isDefault");
 
   const getAllSlots = (data) => {
-    // todo
     /**
      * deepcopy slots
      * generate new slots based on current form data
@@ -196,6 +195,7 @@ export default function UserInput({ slots, setSlots }) {
         );
         const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
         newSlots.push({
+          id: uuidv4(),
           title: `Slot ${i + 1}`,
           description: "",
           start: slotStartTime,
@@ -207,6 +207,7 @@ export default function UserInput({ slots, setSlots }) {
       // add buffer if last slot ends before break
       if (newSlots[newSlots.length - 1].end !== data.breakStartTime) {
         newSlots.push({
+          id: uuidv4(),
           title: `Buffer`,
           description: "",
           start: newSlots[newSlots.length - 1].end,
@@ -217,6 +218,7 @@ export default function UserInput({ slots, setSlots }) {
 
       // generate break
       newSlots.push({
+        id: uuidv4(),
         title: "Break",
         description: "",
         start: data.breakStartTime,
@@ -243,6 +245,7 @@ export default function UserInput({ slots, setSlots }) {
         );
         const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
         newSlots.push({
+          id: uuidv4(),
           title: `Slot ${numSlotsBeforeBreak + i + 1}`,
           description: "",
           start: slotStartTime,
@@ -254,6 +257,7 @@ export default function UserInput({ slots, setSlots }) {
       // add buffer if last slot ends before day end
       if (newSlots[newSlots.length - 1].end !== data.endTime) {
         newSlots.push({
+          id: uuidv4(),
           title: `Buffer`,
           description: "",
           start: newSlots[newSlots.length - 1].end,
@@ -415,7 +419,13 @@ export default function UserInput({ slots, setSlots }) {
                     Date
                   </FormLabel>
                   <FormControl>
-                    <DatePicker {...field} disabled={watchIsDefault} />
+                    <DatePicker
+                      value={
+                        !form.getValues("isDefault") ? field.value : undefined
+                      }
+                      onChange={field.onChange}
+                      disabled={watchIsDefault}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -438,7 +448,7 @@ export default function UserInput({ slots, setSlots }) {
                       className="font-normal"
                       htmlFor="set-default-slot-values"
                     >
-                      Set these slots as default slots
+                      Set as default slots for all dates
                     </Label>
                   </div>
                 </FormControl>

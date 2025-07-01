@@ -8,11 +8,13 @@ import { format } from "date-fns";
 
 export default function Calendar({ slots, setEditEvent, calendarRef }) {
   // Helper: Get dates with specific events
-  const getSpecificDates = (eventList) =>
-    new Set(eventList.filter((e) => e.date !== "default").map((e) => e.date));
+  const getSpecificDates = (eventList) => {
+    return new Set(
+      eventList.filter((e) => e.date !== "default").map((e) => e.date)
+    );
+  };
 
   const getEvents = (info) => {
-    // todo
     /**
      * generate a list of dates for which there are slots defined
      * for each date in the visible range (info.start, info.end),
@@ -45,7 +47,10 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
             title: e.title,
             start: new Date(`${dateStr}T${e.start}:00`),
             end: new Date(`${dateStr}T${e.end}:00`),
-            description: e.description,
+            extendedProps: {
+              description: e.description,
+              slotId: e.id,
+            },
           };
         });
 
@@ -58,7 +63,10 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
             title: e.title,
             start: new Date(`${dateStr}T${e.start}:00`),
             end: new Date(`${dateStr}T${e.end}:00`),
-            description: e.description,
+            extendedProps: {
+              description: e.description,
+              slotId: e.id,
+            },
           };
         });
         generated.push(...eventList);

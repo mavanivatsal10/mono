@@ -1,12 +1,12 @@
-01. user can add title and desc to slots
+01. dome: user can add title and desc to slots
 02. done: calender like ui
 03. done: different slots for different days
 04. user can add full leave or half leave
 05. user can add short leave: from time - to time
+06. done: user can edit slot timings
+07. done: user can delete slots
 
 ----------------------------
 
-- DONE: populate the entire calendar with the generated slots
-- DONE: user can add slots for a given day. calendar should update accordingly
-- user can ADD slots, not REPLACE them
-- user can edit the slots
+- positioning of the popover
+- edit title and description

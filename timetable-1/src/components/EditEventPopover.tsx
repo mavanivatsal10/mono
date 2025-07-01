@@ -4,6 +4,17 @@ import { Textarea } from "./ui/textarea";
 import { X } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 export default function EditEventPopover({
   editEvent,
@@ -14,13 +25,21 @@ export default function EditEventPopover({
   const popupRef = useRef<HTMLDivElement>(null);
   const [editEventDetails, setEditEventDetails] = useState(editEvent.eventData);
 
+  document.body.classList.add("overflow-hidden");
+
+  const removePopup = () => {
+    setEditEvent({
+      showOverlay: false,
+      eventData: null,
+    });
+    document.body.classList.remove("overflow-hidden");
+  };
+
+  // click outside to close the popup
   useEffect(() => {
     function handleClick(event) {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setEditEvent({
-          showOverlay: false,
-          eventData: null,
-        });
+        removePopup();
       }
     }
     document.addEventListener("click", handleClick);
@@ -29,35 +48,75 @@ export default function EditEventPopover({
     };
   }, []);
 
-  const formatCustomDate = (date) => {
-    // Helper to add ordinal suffix to a day
-    const getOrdinal = (day) => {
-      if (day > 3 && day < 21) return `${day}th`;
-      const suffixes = { 1: "st", 2: "nd", 3: "rd" };
-      const suffix = suffixes[day % 10] || "th";
-      return `${day}${suffix}`;
-    };
+  const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  const timeSchema = z
+    .string()
+    .regex(timeRegex, { message: "Please enter a valid time" });
 
-    const time = format(date, "hh:mm a"); // 01:45 PM
-    const day = getOrdinal(date.getDate()); // 25th
-    const month = format(date, "LLLL"); // July
-    const year = format(date, "yyyy"); // 2025
+  const formSchema = z.object({
+    title: z.string(),
+    description: z.string(),
+    start: timeSchema,
+    end: timeSchema,
+  });
 
-    return `${time} - ${day} ${month}, ${year}`;
-  };
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: editEventDetails.title,
+      description: editEventDetails.extendedProps.description,
+      start: format(editEventDetails.start, "HH:mm"),
+      end: format(editEventDetails.end, "HH:mm"),
+    },
+  });
 
-  const saveEditEvent = () => {
+  const editSlot = (mode: "save" | "delete") => {
     /**
-     * find all the events on that day
-     *  - if there are no events available on that date, it means that it uses default events
-     *  - in this case, make a copy of all the default events with date = this date
-     * map all of this date's events to new title and description
-     * push the new events to slots
+     * slots should be non-empty array
+     * find all the slots on that day
+     *  - if there are no slots available on that date, it means that it uses default slots
+     *  - in this case, make a copy of all the default slots with date = this date, id = `${id}-${date}`
+     * find the event whose id matches the editEventDetails.id and change its title and description OR filter it
+     * filter all the slots on that day and push the updated slots
      */
-    setEditEvent({
-      showOverlay: false,
-      eventData: null,
-    });
+
+    if (slots === null) {
+      return;
+    }
+
+    const slotDate = format(editEventDetails.start, "yyyy-MM-dd");
+    let slotsToday = slots.filter((e) => e.date === slotDate);
+
+    if (slotsToday.length === 0) {
+      const defaultSlots = slots.filter((s) => s.date === "default");
+
+      slotsToday = defaultSlots.map((e) => {
+        return { ...e, id: `${e.id}-${slotDate}`, date: slotDate };
+      });
+    }
+
+    if (mode === "save") {
+      const updatedSlot = slotsToday.find((slot) =>
+        slot.id.includes(editEventDetails.extendedProps.slotId)
+      );
+      updatedSlot.title = form.getValues("title");
+      updatedSlot.description = form.getValues("description");
+      updatedSlot.start = form.getValues("start");
+      updatedSlot.end = form.getValues("end");
+
+      slotsToday = slotsToday.filter((e) => e.id !== updatedSlot.id);
+      slotsToday.push(updatedSlot);
+    } else if (mode === "delete") {
+      slotsToday = slotsToday.filter(
+        (slot) => !slot.id.includes(editEventDetails.extendedProps.slotId)
+      );
+    }
+
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
+    removePopup();
   };
 
   return (
@@ -69,51 +128,91 @@ export default function EditEventPopover({
       <div
         ref={popupRef}
         style={{ zIndex: 10001 }}
-        className="flex flex-col gap-4 w-100 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-md"
+        className="flex flex-col gap-4 w-100 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-md"
       >
-        <div className="flex justify-between items-center gap-4">
-          <Input
-            type="text"
-            value={editEventDetails.title}
-            onChange={(e) =>
-              setEditEventDetails({
-                ...editEventDetails,
-                title: e.target.value,
-              })
-            }
-            placeholder="Title"
-          />
-          <div
-            onClick={() =>
-              setEditEvent({ showOverlay: false, eventData: null })
-            }
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(() => editSlot("save"))}
+            className="p-4 flex items-center justify-center"
           >
-            <X />
-          </div>
-        </div>
-        <Textarea
-          value={editEventDetails.description}
-          onChange={(e) =>
-            setEditEventDetails({
-              ...editEventDetails,
-              description: e.target.value,
-            })
-          }
-          placeholder="Description"
-        />
-        {/* <div>
-          <span>Start Time: </span>
-          <span className="text-sm">
-            {formatCustomDate(editEventDetails.start)}
-          </span>
-        </div>
-        <div>
-          <span>End Time: </span>
-          <span className="text-sm">
-            {formatCustomDate(editEventDetails.end)}
-          </span>
-        </div> */}
-        <Button onClick={saveEditEvent}>Save</Button>
+            <div className="flex flex-col items-center justify-center gap-4 w-full">
+              <div className="flex justify-between items-center w-full gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input type="text" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div onClick={removePopup}>
+                  <X />
+                </div>
+              </div>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Add a description"
+                        className="max-h-50 overflow-auto"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="start"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>Start Time: </FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="end"
+                render={({ field }) => (
+                  <FormItem className="w-full">
+                    <FormLabel>End Time: </FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-4 w-full">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => editSlot("delete")}
+                >
+                  Delete Event
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );
