@@ -4,7 +4,7 @@ import Calendar from "./components/Calendar";
 import EditEventPopover from "./components/EditEventPopover";
 
 export default function App() {
-  const [slots, setSlots] = useState(null);
+  const [slots, setSlots] = useState([]);
   const [editEvent, setEditEvent] = useState({
     showOverlay: false,
     eventData: null,
