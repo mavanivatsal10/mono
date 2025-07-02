@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { X } from "lucide-react";
@@ -15,15 +15,23 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import type { slot } from "@/Types/types";
+import { v4 as uuidv4 } from "uuid";
+import { compareTime, isOverlaping } from "@/lib/utils";
 
 export default function EditEventPopover({
   editEvent,
   setEditEvent,
   slots,
   setSlots,
+}: {
+  editEvent: any;
+  setEditEvent: any;
+  slots: slot[];
+  setSlots: any;
 }) {
   const popupRef = useRef<HTMLDivElement>(null);
-  const [editEventDetails, setEditEventDetails] = useState(editEvent.eventData);
+  const editEventDetails = editEvent.eventData;
 
   document.body.classList.add("overflow-hidden");
 
@@ -53,12 +61,25 @@ export default function EditEventPopover({
     .string()
     .regex(timeRegex, { message: "Please enter a valid time" });
 
-  const formSchema = z.object({
-    title: z.string(),
-    description: z.string(),
-    start: timeSchema,
-    end: timeSchema,
-  });
+  const formSchema = z
+    .object({
+      title: z.string(),
+      description: z.string(),
+      start: timeSchema,
+      end: timeSchema,
+    })
+    .refine(
+      (data) => {
+        return (
+          compareTime(data.start, "isBefore", data.end) ||
+          compareTime(data.start, "isSame", data.end)
+        );
+      },
+      {
+        message: "End time must be on or after start time.",
+        path: ["end"],
+      }
+    );
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -70,9 +91,19 @@ export default function EditEventPopover({
     },
   });
 
-  const editSlot = (mode: "save" | "delete") => {
+  const slotDate = format(editEventDetails.start, "yyyy-MM-dd");
+  let slotsToday = slots.filter((e) => e.date === slotDate);
+
+  if (slotsToday.length === 0) {
+    const defaultSlots = slots.filter((s) => s.date === "default");
+
+    slotsToday = defaultSlots.map((e) => {
+      return { ...e, id: `${e.id}-${slotDate}`, date: slotDate };
+    });
+  }
+
+  const editSlot = () => {
     /**
-     * slots should be non-empty array
      * find all the slots on that day
      *  - if there are no slots available on that date, it means that it uses default slots
      *  - in this case, make a copy of all the default slots with date = this date, id = `${id}-${date}`
@@ -80,37 +111,37 @@ export default function EditEventPopover({
      * filter all the slots on that day and push the updated slots
      */
 
-    if (slots === null) {
-      return;
+    const updatedSlot = slotsToday.find((slot) =>
+      slot.id.includes(editEventDetails.extendedProps.slotId)
+    );
+    updatedSlot.title = form.getValues("title");
+    updatedSlot.description = form.getValues("description");
+
+    const updatedStartTime = form.getValues("start");
+    const updatedEndTime = form.getValues("end");
+
+    for (const slot of slotsToday) {
+      if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        ) &&
+        slot.type === "slot" &&
+        slot.id !== updatedSlot.id
+      ) {
+        form.setError("root", {
+          message: "The new timing is overlapping with another slot",
+          type: "manual",
+        });
+        return;
+      }
     }
 
-    const slotDate = format(editEventDetails.start, "yyyy-MM-dd");
-    let slotsToday = slots.filter((e) => e.date === slotDate);
+    updatedSlot.start = updatedStartTime;
+    updatedSlot.end = updatedEndTime;
 
-    if (slotsToday.length === 0) {
-      const defaultSlots = slots.filter((s) => s.date === "default");
-
-      slotsToday = defaultSlots.map((e) => {
-        return { ...e, id: `${e.id}-${slotDate}`, date: slotDate };
-      });
-    }
-
-    if (mode === "save") {
-      const updatedSlot = slotsToday.find((slot) =>
-        slot.id.includes(editEventDetails.extendedProps.slotId)
-      );
-      updatedSlot.title = form.getValues("title");
-      updatedSlot.description = form.getValues("description");
-      updatedSlot.start = form.getValues("start");
-      updatedSlot.end = form.getValues("end");
-
-      slotsToday = slotsToday.filter((e) => e.id !== updatedSlot.id);
-      slotsToday.push(updatedSlot);
-    } else if (mode === "delete") {
-      slotsToday = slotsToday.filter(
-        (slot) => !slot.id.includes(editEventDetails.extendedProps.slotId)
-      );
-    }
+    slotsToday = slotsToday.filter((e) => e.id !== updatedSlot.id);
+    slotsToday.push(updatedSlot);
 
     const filteredSlots = slots.filter((s) => s.date !== slotDate);
     const updatedSlots = filteredSlots.concat(slotsToday);
@@ -118,6 +149,51 @@ export default function EditEventPopover({
     setSlots(updatedSlots);
     removePopup();
   };
+
+  const deleteSlot = () => {
+    slotsToday = slotsToday.filter(
+      (slot) => !slot.id.includes(editEventDetails.extendedProps.slotId)
+    );
+
+    if (slotsToday.length === 0) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: "00:00",
+        end: "00:00",
+        title: "",
+        description: "",
+        type: "no-events",
+      });
+    }
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
+    removePopup();
+  };
+
+  // remove time overlap error if new time is valid
+  const start = form.watch("start");
+  const end = form.watch("end");
+  useEffect(() => {
+    const currentSlot = slotsToday.find((slot) =>
+      slot.id.includes(editEventDetails.extendedProps.slotId)
+    );
+    for (const slot of slotsToday) {
+      if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: start, end: end }
+        ) &&
+        slot.type === "slot" &&
+        slot.id !== currentSlot.id
+      ) {
+        return;
+      }
+    }
+    form.clearErrors("root");
+  }, [start, end]);
 
   return (
     <div>
@@ -132,7 +208,7 @@ export default function EditEventPopover({
       >
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(() => editSlot("save"))}
+            onSubmit={form.handleSubmit(editSlot)}
             className="p-4 flex items-center justify-center"
           >
             <div className="flex flex-col items-center justify-center gap-4 w-full">
@@ -197,12 +273,17 @@ export default function EditEventPopover({
                   </FormItem>
                 )}
               />
+              {form.formState.errors.root && (
+                <p className="text-red-500">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
               <div className="flex gap-4 w-full">
                 <Button
                   type="button"
                   variant="destructive"
                   className="flex-1"
-                  onClick={() => editSlot("delete")}
+                  onClick={deleteSlot}
                 >
                   Delete Event
                 </Button>

@@ -13,7 +13,7 @@ import { z } from "zod";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { compareTime } from "@/lib/utils";
+import { compareTime, isOverlaping } from "@/lib/utils";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect } from "react";
@@ -107,26 +107,33 @@ export default function AddLeave({ slots, setSlots }) {
   function addLeave(data: z.infer<typeof formSchema>) {
     /**approach
      * find all the slots on that day
-     *  - if there are slots available on that date, find all the slots that intersect with the leave timings and remove them
+     *  - if there are no slots available on that date, it means that it uses default slots
+     *  - in this case, make a copy of all the default slots with date = this date
+     * find all the slots that intersect with the leave timings and remove them
      * push the leave slots
      */
 
     const leaveDate = format(data.date, "yyyy-MM-dd");
-    const slotsToday = slots.filter((slot: slot) => slot.date === leaveDate); // list of all slots on the day of leave
+    let slotsToday = slots.filter((slot: slot) => slot.date === leaveDate); // list of all slots on the day of leave
+
+    if (slotsToday.length === 0) {
+      const defaultSlots = slots.filter((s) => s.date === "default");
+
+      slotsToday = defaultSlots.map((e) => {
+        return { ...e, id: `${e.id}-${leaveDate}`, date: leaveDate };
+      });
+    }
 
     const leaveStart = data.startTime;
     const leaveEnd = data.endTime;
 
-    const remainingSlots = slotsToday.filter((slot) => {
-      return !(
-        (compareTime(slot.startTime, "isAfter", leaveStart) ||
-          compareTime(slot.startTime, "isSame", leaveStart)) &&
-        (compareTime(slot.endTime, "isBefore", leaveEnd) ||
-          compareTime(slot.endTime, "isSame", leaveEnd))
-      );
-    });
-
-    console.log(remainingSlots);
+    const remainingSlots = slotsToday.filter(
+      (slot: slot) =>
+        !isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: leaveStart, end: leaveEnd }
+        )
+    );
 
     remainingSlots.push({
       id: uuidv4(),
@@ -138,7 +145,9 @@ export default function AddLeave({ slots, setSlots }) {
       type: "leave",
     });
 
-    setSlots([...slots, ...remainingSlots]);
+    const filteredSlots = slots.filter((s) => s.date !== leaveDate);
+    const updatedSlots = filteredSlots.concat(remainingSlots);
+    setSlots(updatedSlots);
   }
 
   const watchHolidayType = form.watch("holidayType");

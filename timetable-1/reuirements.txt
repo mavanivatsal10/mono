@@ -1,12 +1,14 @@
 01. dome: user can add title and desc to slots
 02. done: calender like ui
 03. done: different slots for different days
-04. user can add full leave or half leave
-05. user can add short leave: from time - to time
+04. done: user can add full leave or half leave
+05. done: user can add short leave: from time - to time
 06. done: user can edit slot timings
 07. done: user can delete slots
-
-----------------------------
-
-- positioning of the popover
-- edit title and description
+08. done: add validation for time edit in any event
+09. done: when editing time, the new time should not overlap with any other working slot
+10. done: add colors for different types of slots
+11. when editing a slot OR adding a short leave:
+    - the extra time left should have a buffer slot
+    - if two buffer slots are adjacent, they should be merged
+    - if the edited time / short leave time is overlapping with a buffer or break, buffer/break time should be adjusted

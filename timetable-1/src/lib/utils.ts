@@ -21,3 +21,14 @@ export const compareTime = (
     return hour1 > hour2 || (hour1 === hour2 && minute1 > minute2);
   }
 };
+
+export const isOverlaping = (
+  // string should be in this format "HH:MM"
+  slot1: { start: string; end: string },
+  slot2: { start: string; end: string }
+) => {
+  return (
+    compareTime(slot1.end, "isAfter", slot2.start) &&
+    compareTime(slot1.start, "isBefore", slot2.end)
+  );
+};

@@ -14,6 +14,13 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
     );
   };
 
+  const getSlotColor = (type) => {
+    if (type === "slot") return "#118ab2";
+    else if (type === "buffer") return "#06d6a0";
+    else if (type === "break") return "#ffd166";
+    else if (type === "leave") return "red";
+  };
+
   const getEvents = (info) => {
     /**
      * generate a list of dates for which there are slots defined
@@ -21,10 +28,6 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
      *     if there are events on that date, then push them
      *     else push the default events
      */
-
-    if (slots === null) {
-      return [];
-    }
 
     const start = info.start;
     const end = info.end;
@@ -40,33 +43,37 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
       const dateStr = format(date, "yyyy-MM-dd");
 
       if (specificDates.has(dateStr)) {
-        const eventsToday = slots.filter((s) => s.date === dateStr);
-        const eventList = eventsToday.map((e) => {
+        const slotsToday = slots.filter(
+          (s) => s.date === dateStr && s.type !== "no-events"
+        );
+        const eventList = slotsToday.map((slot) => {
           return {
             id: uuidv4(),
-            title: e.title,
-            start: new Date(`${dateStr}T${e.start}:00`),
-            end: new Date(`${dateStr}T${e.end}:00`),
+            title: slot.title,
+            start: new Date(`${dateStr}T${slot.start}:00`),
+            end: new Date(`${dateStr}T${slot.end}:00`),
             extendedProps: {
-              description: e.description,
-              slotId: e.id,
+              description: slot.description,
+              slotId: slot.id,
             },
+            color: getSlotColor(slot.type),
           };
         });
 
         generated.push(...eventList);
       } else {
-        const defaultEvents = slots.filter((slot) => slot.date === "default");
-        const eventList = defaultEvents.map((e) => {
+        const defaultSlots = slots.filter((slot) => slot.date === "default");
+        const eventList = defaultSlots.map((slot) => {
           return {
             id: uuidv4(),
-            title: e.title,
-            start: new Date(`${dateStr}T${e.start}:00`),
-            end: new Date(`${dateStr}T${e.end}:00`),
+            title: slot.title,
+            start: new Date(`${dateStr}T${slot.start}:00`),
+            end: new Date(`${dateStr}T${slot.end}:00`),
             extendedProps: {
-              description: e.description,
-              slotId: e.id,
+              description: slot.description,
+              slotId: slot.id,
             },
+            color: getSlotColor(slot.type),
           };
         });
         generated.push(...eventList);

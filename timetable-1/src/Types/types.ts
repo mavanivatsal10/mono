@@ -5,5 +5,5 @@ export type slot = {
   start: string;
   end: string;
   date: string;
-  type: string;
+  type: "slot" | "no-events" | "buffer" | "break" | "leave";
 };
