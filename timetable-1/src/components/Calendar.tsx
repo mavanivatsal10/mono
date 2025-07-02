@@ -5,8 +5,14 @@ import { v4 as uuidv4 } from "uuid";
 import "../index.css";
 import { useEffect } from "react";
 import { format } from "date-fns";
+import { compareTime } from "@/lib/utils";
 
-export default function Calendar({ slots, setEditEvent, calendarRef }) {
+export default function Calendar({
+  slots,
+  setSlots,
+  setEditEvent,
+  calendarRef,
+}) {
   // Helper: Get dates with specific events
   const getSpecificDates = (eventList) => {
     return new Set(
@@ -112,6 +118,81 @@ export default function Calendar({ slots, setEditEvent, calendarRef }) {
       eventData: info.event,
     });
   };
+
+  // if two adjacent slots are buffer slots, merge them
+  // if work slot overlaps with buffer/break, adjust buffer/break time
+  useEffect(() => {
+    /**
+     * group by date
+     * sort by start time
+     * if two adjacent slots are buffer slots, merge them
+     */
+
+    const groupedSlots = slots.reduce((acc, slot) => {
+      const date = slot.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(slot);
+      return acc;
+    }, {});
+
+    const groupedSortedSlots = Object.entries(groupedSlots).reduce(
+      (acc, [date, slots]) => {
+        acc[date] = slots.sort((a, b) =>
+          compareTime(a.start, "isBefore", b.start) ? -1 : 1
+        );
+        return acc;
+      },
+      {}
+    );
+
+    let isChangeSlots = false;
+
+    for (let [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
+      for (let i = 0; i < sortedSlots.length - 1; i++) {
+        // adjust buffer/break time
+        if (
+          compareTime(sortedSlots[i].end, "isAfter", sortedSlots[i + 1].start)
+        ) {
+          if (
+            sortedSlots[i].type === "buffer" ||
+            sortedSlots[i].type === "break"
+          ) {
+            sortedSlots[i].end = sortedSlots[i + 1].start;
+            isChangeSlots = true;
+          } else if (
+            sortedSlots[i + 1].type === "buffer" ||
+            sortedSlots[i + 1].type === "break"
+          ) {
+            if (sortedSlots[i + 1].end > sortedSlots[i].end) {
+              sortedSlots[i + 1].start = sortedSlots[i].end;
+            } else {
+              sortedSlots = sortedSlots.filter((_, index) => index !== i + 1);
+            }
+            isChangeSlots = true;
+          }
+        }
+
+        // merge two adjacent buffer slots
+        if (
+          sortedSlots[i].type === "buffer" &&
+          sortedSlots[i + 1].type === "buffer" &&
+          compareTime(sortedSlots[i].end, "isSame", sortedSlots[i + 1].start)
+        ) {
+          sortedSlots[i].end = sortedSlots[i + 1].end;
+          sortedSlots.splice(i + 1, 1);
+          isChangeSlots = true;
+        }
+      }
+      groupedSortedSlots[date] = sortedSlots;
+    }
+
+    if (isChangeSlots) {
+      const newSlots = Object.values(groupedSortedSlots).flat();
+      setSlots(newSlots);
+    }
+  }, [slots]);
 
   return (
     <div>

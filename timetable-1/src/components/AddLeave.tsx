@@ -135,7 +135,7 @@ export default function AddLeave({ slots, setSlots }) {
         )
     );
 
-    remainingSlots.push({
+    const leaveSlot = {
       id: uuidv4(),
       title: "Leave",
       description: "",
@@ -143,7 +143,53 @@ export default function AddLeave({ slots, setSlots }) {
       end: leaveEnd,
       date: leaveDate,
       type: "leave",
-    });
+    };
+    remainingSlots.push(leaveSlot);
+
+    // add buffer if edited time is leaving time before/after neighboring slots
+    const sortedSlotsToday = remainingSlots.sort((a, b) =>
+      compareTime(a.start, "isBefore", b.start) ? -1 : 1
+    );
+
+    let slotBefore, slotAfter;
+    for (let i = 0; i < sortedSlotsToday.length; i++) {
+      const slot = sortedSlotsToday[i];
+      if (slot.id === leaveSlot.id) {
+        slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
+        slotAfter =
+          i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
+      }
+    }
+
+    if (
+      slotBefore !== null &&
+      compareTime(slotBefore.end, "isBefore", leaveSlot.start)
+    ) {
+      remainingSlots.push({
+        id: uuidv4(),
+        date: leaveDate,
+        start: slotBefore.end,
+        end: leaveSlot.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    if (
+      slotAfter !== null &&
+      compareTime(leaveSlot.end, "isBefore", slotAfter.start)
+    ) {
+      remainingSlots.push({
+        id: uuidv4(),
+        date: leaveDate,
+        start: leaveSlot.end,
+        end: slotAfter.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
 
     const filteredSlots = slots.filter((s) => s.date !== leaveDate);
     const updatedSlots = filteredSlots.concat(remainingSlots);

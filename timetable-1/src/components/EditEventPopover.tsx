@@ -70,13 +70,10 @@ export default function EditEventPopover({
     })
     .refine(
       (data) => {
-        return (
-          compareTime(data.start, "isBefore", data.end) ||
-          compareTime(data.start, "isSame", data.end)
-        );
+        return compareTime(data.start, "isBefore", data.end);
       },
       {
-        message: "End time must be on or after start time.",
+        message: "End time must be after start time.",
         path: ["end"],
       }
     );
@@ -101,6 +98,12 @@ export default function EditEventPopover({
       return { ...e, id: `${e.id}-${slotDate}`, date: slotDate };
     });
   }
+
+  const tempSortedSlotsToday = slotsToday.sort((a, b) => {
+    return compareTime(a.start, "isBefore", b.start) ? -1 : 1;
+  });
+  const dayStart = tempSortedSlotsToday[0]?.start;
+  const dayEnd = tempSortedSlotsToday[tempSortedSlotsToday.length - 1]?.end;
 
   const editSlot = () => {
     /**
@@ -142,6 +145,51 @@ export default function EditEventPopover({
 
     slotsToday = slotsToday.filter((e) => e.id !== updatedSlot.id);
     slotsToday.push(updatedSlot);
+
+    // add buffer if edited time is leaving time before/after neighboring slots
+    const sortedSlotsToday = slotsToday.sort((a, b) =>
+      compareTime(a.start, "isBefore", b.start) ? -1 : 1
+    );
+
+    let slotBefore, slotAfter;
+    for (let i = 0; i < sortedSlotsToday.length; i++) {
+      const slot = sortedSlotsToday[i];
+      if (slot.id === updatedSlot.id) {
+        slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
+        slotAfter =
+          i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
+      }
+    }
+
+    if (
+      slotBefore !== null &&
+      compareTime(slotBefore.end, "isBefore", updatedSlot.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: slotBefore.end,
+        end: updatedSlot.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    if (
+      slotAfter !== null &&
+      compareTime(updatedSlot.end, "isBefore", slotAfter.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: updatedSlot.end,
+        end: slotAfter.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
 
     const filteredSlots = slots.filter((s) => s.date !== slotDate);
     const updatedSlots = filteredSlots.concat(slotsToday);

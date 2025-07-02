@@ -27,6 +27,7 @@ export default function App() {
       <div className="bg-white p-4 rounded-lg shadow-md h-fit w-fit">
         <Calendar
           slots={slots}
+          setSlots={setSlots}
           setEditEvent={setEditEvent}
           calendarRef={calendarRef}
         />
