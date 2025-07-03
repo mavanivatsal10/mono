@@ -99,29 +99,30 @@ export default function EditEventPopover({
     });
   }
 
+  const currentSlot = slotsToday.find((slot) =>
+    slot.id.includes(editEventDetails.extendedProps.slotId)
+  );
+
   const tempSortedSlotsToday = slotsToday.sort((a, b) => {
     return compareTime(a.start, "isBefore", b.start) ? -1 : 1;
   });
   const dayStart = tempSortedSlotsToday[0]?.start;
   const dayEnd = tempSortedSlotsToday[tempSortedSlotsToday.length - 1]?.end;
 
-  const editSlot = () => {
+  const updatedStartTime = form.watch("start");
+  const updatedEndTime = form.watch("end");
+
+  const editWorkSlot = () => {
     /**
      * find all the slots on that day
      *  - if there are no slots available on that date, it means that it uses default slots
      *  - in this case, make a copy of all the default slots with date = this date, id = `${id}-${date}`
-     * find the event whose id matches the editEventDetails.id and change its title and description OR filter it
+     * find the event whose id matches the editEventDetails.id (id of the popup/current event) and change its title and description OR filter it
      * filter all the slots on that day and push the updated slots
      */
 
-    const updatedSlot = slotsToday.find((slot) =>
-      slot.id.includes(editEventDetails.extendedProps.slotId)
-    );
-    updatedSlot.title = form.getValues("title");
-    updatedSlot.description = form.getValues("description");
-
-    const updatedStartTime = form.getValues("start");
-    const updatedEndTime = form.getValues("end");
+    currentSlot.title = form.getValues("title");
+    currentSlot.description = form.getValues("description");
 
     for (const slot of slotsToday) {
       if (
@@ -130,21 +131,34 @@ export default function EditEventPopover({
           { start: updatedStartTime, end: updatedEndTime }
         ) &&
         slot.type === "slot" &&
-        slot.id !== updatedSlot.id
+        slot.id !== currentSlot.id
       ) {
         form.setError("root", {
-          message: "The new timing is overlapping with another slot",
+          message: "The new timing is overlapping with another working slot",
+          type: "manual",
+        });
+        return;
+      } else if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        ) &&
+        slot.type === "leave" &&
+        slot.id !== currentSlot.id
+      ) {
+        form.setError("root", {
+          message: "The new timing is overlapping with your leave",
           type: "manual",
         });
         return;
       }
     }
 
-    updatedSlot.start = updatedStartTime;
-    updatedSlot.end = updatedEndTime;
+    currentSlot.start = updatedStartTime;
+    currentSlot.end = updatedEndTime;
 
-    slotsToday = slotsToday.filter((e) => e.id !== updatedSlot.id);
-    slotsToday.push(updatedSlot);
+    slotsToday = slotsToday.filter((e) => e.id !== currentSlot.id);
+    slotsToday.push(currentSlot);
 
     // add buffer if edited time is leaving time before/after neighboring slots
     const sortedSlotsToday = slotsToday.sort((a, b) =>
@@ -154,7 +168,7 @@ export default function EditEventPopover({
     let slotBefore, slotAfter;
     for (let i = 0; i < sortedSlotsToday.length; i++) {
       const slot = sortedSlotsToday[i];
-      if (slot.id === updatedSlot.id) {
+      if (slot.id === currentSlot.id) {
         slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
         slotAfter =
           i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
@@ -163,13 +177,13 @@ export default function EditEventPopover({
 
     if (
       slotBefore !== null &&
-      compareTime(slotBefore.end, "isBefore", updatedSlot.start)
+      compareTime(slotBefore.end, "isBefore", currentSlot.start)
     ) {
       slotsToday.push({
         id: uuidv4(),
         date: slotDate,
         start: slotBefore.end,
-        end: updatedSlot.start,
+        end: currentSlot.start,
         title: "Buffer",
         description: "",
         type: "buffer",
@@ -178,12 +192,12 @@ export default function EditEventPopover({
 
     if (
       slotAfter !== null &&
-      compareTime(updatedSlot.end, "isBefore", slotAfter.start)
+      compareTime(currentSlot.end, "isBefore", slotAfter.start)
     ) {
       slotsToday.push({
         id: uuidv4(),
         date: slotDate,
-        start: updatedSlot.end,
+        start: currentSlot.end,
         end: slotAfter.start,
         title: "Buffer",
         description: "",
@@ -196,6 +210,43 @@ export default function EditEventPopover({
 
     setSlots(updatedSlots);
     removePopup();
+  };
+
+  const editBreakOrBuffer = () => {
+    currentSlot.title = form.getValues("title");
+    currentSlot.description = form.getValues("description");
+
+    if (
+      currentSlot?.start !== updatedStartTime ||
+      currentSlot.end !== updatedEndTime
+    ) {
+      form.setError("root", {
+        message: `Timing of ${currentSlot.type} cannot be changed`,
+        type: "manual",
+      });
+      return;
+    }
+
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
+    removePopup();
+  };
+
+  const editLeave = () => {};
+
+  const editSlot = () => {
+    if (currentSlot?.type === "slot") {
+      editWorkSlot();
+    } else if (
+      currentSlot?.type === "buffer" ||
+      currentSlot?.type === "break"
+    ) {
+      editBreakOrBuffer();
+    } else if (currentSlot?.type === "leave") {
+      editLeave();
+    }
   };
 
   const deleteSlot = () => {
@@ -221,27 +272,40 @@ export default function EditEventPopover({
     removePopup();
   };
 
-  // remove time overlap error if new time is valid
-  const start = form.watch("start");
-  const end = form.watch("end");
   useEffect(() => {
-    const currentSlot = slotsToday.find((slot) =>
-      slot.id.includes(editEventDetails.extendedProps.slotId)
-    );
+    // remove time overlap error if new time is valid
     for (const slot of slotsToday) {
       if (
         isOverlaping(
           { start: slot.start, end: slot.end },
-          { start: start, end: end }
+          { start: updatedStartTime, end: updatedEndTime }
         ) &&
         slot.type === "slot" &&
         slot.id !== currentSlot.id
       ) {
         return;
+      } else if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        ) &&
+        slot.type === "leave" &&
+        slot.id !== currentSlot.id
+      ) {
+        return;
       }
     }
+
+    // remove buffer/break time cannot be changed error
+    if (
+      currentSlot.start !== updatedStartTime ||
+      currentSlot.end !== updatedEndTime
+    ) {
+      return;
+    }
+
     form.clearErrors("root");
-  }, [start, end]);
+  }, [updatedStartTime, updatedEndTime]);
 
   return (
     <div>
