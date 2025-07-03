@@ -12,7 +12,11 @@ export default function UserInput({ slots, setSlots }) {
         <TabsTrigger value="slots" className="px-6">
           Add Slots
         </TabsTrigger>
-        <TabsTrigger value="leave" className="px-6">
+        <TabsTrigger
+          value="leave"
+          className="px-6"
+          disabled={!slots.some((s) => s.date === "default")}
+        >
           Add a Leave
         </TabsTrigger>
       </TabsList>

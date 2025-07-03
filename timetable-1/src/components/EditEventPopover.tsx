@@ -17,7 +17,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { slot } from "@/Types/types";
 import { v4 as uuidv4 } from "uuid";
-import { compareTime, isOverlaping } from "@/lib/utils";
+import { addTime, compareTime, isOverlaping } from "@/lib/utils";
+import deepcopy from "deepcopy";
 
 export default function EditEventPopover({
   editEvent,
@@ -91,26 +92,184 @@ export default function EditEventPopover({
   const slotDate = format(editEventDetails.start, "yyyy-MM-dd");
   let slotsToday = slots.filter((e) => e.date === slotDate);
 
+  const defaultSlots = slots.filter((s) => s.date === "default");
   if (slotsToday.length === 0) {
-    const defaultSlots = slots.filter((s) => s.date === "default");
-
     slotsToday = defaultSlots.map((e) => {
       return { ...e, id: `${e.id}-${slotDate}`, date: slotDate };
     });
   }
 
+  const breakToday =
+    slotsToday.find((slot) => slot.type === "break") ||
+    defaultSlots.find((slot) => slot.type === "break");
+
   const currentSlot = slotsToday.find((slot) =>
     slot.id.includes(editEventDetails.extendedProps.slotId)
   );
 
-  const tempSortedSlotsToday = slotsToday.sort((a, b) => {
+  const tempSortedDefaultSlots = defaultSlots.sort((a, b) => {
     return compareTime(a.start, "isBefore", b.start) ? -1 : 1;
   });
-  const dayStart = tempSortedSlotsToday[0]?.start;
-  const dayEnd = tempSortedSlotsToday[tempSortedSlotsToday.length - 1]?.end;
+  const defaultDayStart = tempSortedDefaultSlots[0]?.start;
+  const defaultDayEnd =
+    tempSortedDefaultSlots[tempSortedDefaultSlots.length - 1]?.end;
+  //const defaultBreak = defaultSlots.find((slot) => slot.type === "break");
 
   const updatedStartTime = form.watch("start");
   const updatedEndTime = form.watch("end");
+
+  // helper functions
+  // if buffer is larger than work slot time, replace with slot(s) and buffer
+  const editLongBuffer = (slotAfter: slot) => {
+    /**
+     * calculate slot duration (max freq of slot durations) if slots available else take default slot duration
+     * if slotsToday has break available, take that break time else take default break time
+     * go through the sorted slots. if the current slot is buffer and buffer size > working slot size:
+     *  - remove the buffer slot
+     *  - add slot(s) based on buffer size
+     *  - add buffer if last slot end time < break start time
+     *  - add break if last slot/buffer end time is break start time
+     *  - add slot(s) if break added and slotAfter.start is after break end and remaining buffer size > working slot size
+     *  - add buffer if last slot end time is before dayEnd
+     */
+
+    const calculateSlotDuration = (slot: slot): number => {
+      const hstart = Number(slot.start.split(":")[0]);
+      const mstart = Number(slot.start.split(":")[1]);
+      const hend = Number(slot.end.split(":")[0]);
+      const mend = Number(slot.end.split(":")[1]);
+      return (hend - hstart) * 60 + (mend - mstart);
+    };
+
+    const getSlotDuration = (slots: slot[]) => {
+      if (slots.length === 0) return 60;
+      const slotDurations = slots.map((slot) => calculateSlotDuration(slot));
+
+      let res = 0;
+      const freq = slotDurations.reduce((acc, duration) => {
+        if (acc[duration]) {
+          acc[duration]++;
+        } else {
+          acc[duration] = 1;
+        }
+        return acc;
+      }, {});
+
+      for (const duration in freq) {
+        if (freq[duration] > res) {
+          res = duration;
+        }
+      }
+      return res;
+    };
+    const slotDuration = getSlotDuration(
+      slotsToday.filter((slot) => slot.type === "slot")
+    );
+
+    const tempSlots = deepcopy(slotsToday);
+    for (const slot of tempSlots) {
+      const bufferTime = calculateSlotDuration(slot);
+      if (slot.type === "buffer" && bufferTime > slotDuration) {
+        // add slots
+        for (let i = 0; i < Math.floor(bufferTime / slotDuration); i++) {
+          slotsToday = slotsToday.filter((s) => s.id !== slot.id);
+          slotsToday.push({
+            id: uuidv4(),
+            date: slotDate,
+            type: "slot",
+            start: addTime(slot.start, slotDuration * i),
+            end: addTime(slot.start, slotDuration * (i + 1)),
+            title: "Work Slot",
+            description: "",
+          });
+        }
+
+        // // add buffer
+        // if (
+        //   compareTime(
+        //     slotsToday[slotsToday.length - 1].end,
+        //     "isBefore",
+        //     breakToday?.start
+        //   )
+        // ) {
+        //   slotsToday.push({
+        //     id: uuidv4(),
+        //     date: slotDate,
+        //     type: "buffer",
+        //     start: slotsToday[slotsToday.length - 1].end,
+        //     end: breakToday?.start,
+        //     title: "Buffer",
+        //     description: "",
+        //   });
+        // }
+        // // add break
+        // if (
+        //   compareTime(
+        //     slotsToday[slotsToday.length - 1].end,
+        //     "isSame",
+        //     breakToday.start
+        //   )
+        // ) {
+        //   slotsToday.push({
+        //     id: uuidv4(),
+        //     date: slotDate,
+        //     type: "break",
+        //     start: breakToday.start,
+        //     end: breakToday.end,
+        //     title: "Break",
+        //     description: "",
+        //   });
+        // }
+        // // add slots
+        // const remainingTime =
+        //   bufferTime -
+        //   (Math.floor(bufferTime / slotDuration) + 2) * slotDuration;
+        // if (
+        //   slotsToday[slotsToday.length - 1].type === "break" &&
+        //   compareTime(
+        //     slotAfter.start,
+        //     "isAfter",
+        //     slotsToday[slotsToday.length - 1].end
+        //   ) &&
+        //   remainingTime > slotDuration
+        // ) {
+        //   for (let i = 0; i < Math.floor(remainingTime / slotDuration); i++) {
+        //     slotsToday.push({
+        //       id: uuidv4(),
+        //       date: slotDate,
+        //       type: "slot",
+        //       start: addTime(breakToday.end, slotDuration * i),
+        //       end: addTime(breakToday.end, slotDuration * (i + 1)),
+        //       title: "Work Slot",
+        //       description: "",
+        //     });
+        //   }
+        // }
+        // // add buffer
+        // if (
+        //   compareTime(
+        //     slotsToday[slotsToday.length - 1].end,
+        //     "isBefore",
+        //     defaultDayEnd
+        //   )
+        // ) {
+        //   slotsToday.push({
+        //     id: uuidv4(),
+        //     date: slotDate,
+        //     type: "buffer",
+        //     start: slotsToday[slotsToday.length - 1].end,
+        //     end: defaultDayEnd,
+        //     title: "Buffer",
+        //     description: "",
+        //   });
+        // }
+      }
+    }
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
+  };
 
   const editWorkSlot = () => {
     /**
@@ -234,7 +393,78 @@ export default function EditEventPopover({
     removePopup();
   };
 
-  const editLeave = () => {};
+  const editLeave = () => {
+    currentSlot.title = form.getValues("title");
+    currentSlot.description = form.getValues("description");
+
+    for (const slot of slotsToday) {
+      if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        ) &&
+        slot.type === "leave" &&
+        slot.id !== currentSlot.id
+      ) {
+        form.setError("root", {
+          message: "The new timing is overlapping with another leave",
+          type: "manual",
+        });
+        return;
+      }
+    }
+
+    // if (
+    //   slotsToday.find((s) => s.type === "break") === undefined &&
+    //   (compareTime(updatedEndTime, "isBefore", breakToday.start) ||
+    //     compareTime(updatedStartTime, "isAfter", breakToday.end))
+    // ) {
+    //   slotsToday.push({
+    //     id: uuidv4(),
+    //     date: slotDate,
+    //     start: breakToday.start,
+    //     end: breakToday.end,
+    //     title: "Break",
+    //     description: "",
+    //     type: "break",
+    //   });
+    // }
+
+    currentSlot.start = updatedStartTime;
+    currentSlot.end = updatedEndTime;
+
+    slotsToday = slotsToday.filter(
+      (slot) =>
+        !isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        )
+    );
+    slotsToday.push(currentSlot);
+
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    slotsToday = filteredSlots.concat(slotsToday);
+
+    const leaveSlot = slotsToday.find((s) => s.type === "leave");
+    const breakSlot = slotsToday.find((s) => s.type === "break");
+
+    const isLeaveBeforeBreak =
+      leaveSlot !== undefined &&
+      breakSlot !== undefined &&
+      compareTime(leaveSlot.end, "isBefore", breakSlot.start);
+    const isLeaveAfterBreak =
+      leaveSlot !== undefined &&
+      breakSlot !== undefined &&
+      compareTime(leaveSlot.start, "isAfter", breakSlot.end);
+    const isLeaveConsumeBreak =
+      leaveSlot !== undefined && breakSlot === undefined;
+
+    if (isLeaveBeforeBreak) {
+    }
+
+    setSlots(slotsToday);
+    removePopup();
+  };
 
   const editSlot = () => {
     if (currentSlot?.type === "slot") {

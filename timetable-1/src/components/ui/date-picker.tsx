@@ -8,7 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export default function DatePicker({ value, onChange, disabled }) {
+export default function DatePicker({
+  value,
+  onChange,
+  disabled,
+  disableDates,
+}) {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -34,6 +39,7 @@ export default function DatePicker({ value, onChange, disabled }) {
               onChange(date ? date : null);
               setOpen(false);
             }}
+            disabled={disableDates}
           />
         </PopoverContent>
       </Popover>

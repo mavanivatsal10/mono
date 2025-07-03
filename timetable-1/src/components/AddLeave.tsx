@@ -213,6 +213,19 @@ export default function AddLeave({ slots, setSlots }) {
     }
   }, [watchHolidayType, watchHalfSession]);
 
+  const findLeaveDates = (date) => {
+    console.log(date);
+    if (slots.find((s) => s.date === "default") !== undefined) return false;
+    const getSpecificDates = (eventList) => {
+      return new Set(
+        eventList.filter((e) => e.date !== "default").map((e) => e.date)
+      );
+    };
+
+    const specificDates = getSpecificDates(slots);
+    return !specificDates.has(format(date, "yyyy-MM-dd"));
+  };
+
   return (
     <Form {...form}>
       <form
@@ -227,7 +240,7 @@ export default function AddLeave({ slots, setSlots }) {
               <FormItem className="w-50">
                 <FormLabel>Date</FormLabel>
                 <FormControl>
-                  <DatePicker {...field} />
+                  <DatePicker {...field} disableDates={findLeaveDates} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

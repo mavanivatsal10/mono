@@ -32,3 +32,13 @@ export const isOverlaping = (
     compareTime(slot1.start, "isBefore", slot2.end)
   );
 };
+
+export const addTime = (time1: string, minutes: number) => {
+  const [hour, minute] = time1.split(":");
+  const totalMinutes = Number(hour) * 60 + Number(minute) + minutes;
+  const newHour = Math.floor(totalMinutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const newMinute = (totalMinutes % 60).toString().padStart(2, "0");
+  return `${newHour}:${newMinute}`;
+};
