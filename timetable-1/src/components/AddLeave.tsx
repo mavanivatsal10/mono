@@ -127,13 +127,13 @@ export default function AddLeave({ slots, setSlots }) {
     const leaveStart = data.startTime;
     const leaveEnd = data.endTime;
 
-    const remainingSlots = slotsToday.filter(
-      (slot: slot) =>
-        !isOverlaping(
-          { start: slot.start, end: slot.end },
-          { start: leaveStart, end: leaveEnd }
-        )
-    );
+    const remainingSlots = slotsToday.filter((slot: slot) => {
+      if (slot.type === "break") return true;
+      return !isOverlaping(
+        { start: slot.start, end: slot.end },
+        { start: leaveStart, end: leaveEnd }
+      );
+    });
 
     const leaveSlot = {
       id: uuidv4(),

@@ -234,7 +234,84 @@ export default function EditEventPopover({
     removePopup();
   };
 
-  const editLeave = () => {};
+  const editLeave = () => {
+    currentSlot.title = form.getValues("title");
+    currentSlot.description = form.getValues("description");
+
+    for (const slot of slotsToday) {
+      if (
+        isOverlaping(
+          { start: slot.start, end: slot.end },
+          { start: updatedStartTime, end: updatedEndTime }
+        ) &&
+        slot.type === "leave" &&
+        slot.id !== currentSlot.id
+      ) {
+        form.setError("root", {
+          message: "The new timing is overlapping with another leave",
+          type: "manual",
+        });
+        return;
+      }
+    }
+
+    currentSlot.start = updatedStartTime;
+    currentSlot.end = updatedEndTime;
+
+    slotsToday = slotsToday.filter((e) => e.id !== currentSlot.id);
+    slotsToday.push(currentSlot);
+
+    // add buffer if edited time is leaving time before/after neighboring slots
+    const sortedSlotsToday = slotsToday.sort((a, b) =>
+      compareTime(a.start, "isBefore", b.start) ? -1 : 1
+    );
+
+    let slotBefore, slotAfter;
+    for (let i = 0; i < sortedSlotsToday.length; i++) {
+      const slot = sortedSlotsToday[i];
+      if (slot.id === currentSlot.id) {
+        slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
+        slotAfter =
+          i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
+      }
+    }
+
+    if (
+      slotBefore !== null &&
+      compareTime(slotBefore.end, "isBefore", currentSlot.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: slotBefore.end,
+        end: currentSlot.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    if (
+      slotAfter !== null &&
+      compareTime(currentSlot.end, "isBefore", slotAfter.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: currentSlot.end,
+        end: slotAfter.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
+    removePopup();
+  };
 
   const editSlot = () => {
     if (currentSlot?.type === "slot") {

@@ -1,3 +1,4 @@
+import type { slot } from "@/Types/types";
 import AddLeave from "./AddLeave";
 import AddSlots from "./AddSlots";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -12,7 +13,11 @@ export default function UserInput({ slots, setSlots }) {
         <TabsTrigger value="slots" className="px-6">
           Add Slots
         </TabsTrigger>
-        <TabsTrigger value="leave" className="px-6">
+        <TabsTrigger
+          value="leave"
+          className="px-6"
+          disabled={!slots.some((slot: slot) => slot.date === "default")}
+        >
           Add a Leave
         </TabsTrigger>
       </TabsList>
