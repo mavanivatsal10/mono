@@ -152,6 +152,23 @@ export default function AddSlots({
      */
 
     const generateNewSlots = () => {
+      /**
+       * calculate num slots before break and num slots after break
+       * if num slots before break > 0, add work slots
+       * add buffer:
+       *  - if num slots before break > 0
+       *     - if last slot ends before break, add buffer
+       *  - else (no work slots before break)
+       *     - if dayStart before break start, add buffer
+       * add break
+       * if num slots after break > 0, add work slots
+       * add buffer:
+       *  - if num slots after break > 0
+       *     - if last slot ends before day end, add buffer
+       *  - else (no work slots after break)
+       *     - if dayEnd after break end, add buffer
+       */
+
       // helper functions
       const getTimeNumsFromString = (time: string) =>
         time.split(":").map((t) => Number(t));
@@ -214,16 +231,30 @@ export default function AddSlots({
         });
       }
 
-      // add buffer if last slot ends before break
-      if (newSlots[newSlots.length - 1].end !== data.breakStartTime) {
-        newSlots.push({
-          id: uuidv4(),
-          title: `Buffer`,
-          description: "",
-          start: newSlots[newSlots.length - 1].end,
-          end: data.breakStartTime,
-          type: "buffer",
-        });
+      // geneate buffer
+      if (numSlotsBeforeBreak > 0) {
+        // add buffer if last slot ends before break start
+        if (newSlots[newSlots.length - 1].end < data.breakStartTime) {
+          newSlots.push({
+            id: uuidv4(),
+            title: `Buffer`,
+            description: "",
+            start: newSlots[newSlots.length - 1].end,
+            end: data.breakStartTime,
+            type: "buffer",
+          });
+        }
+      } else {
+        if (data.startTime < data.breakStartTime) {
+          newSlots.push({
+            id: uuidv4(),
+            title: `Buffer`,
+            description: "",
+            start: data.startTime,
+            end: data.breakStartTime,
+            type: "buffer",
+          });
+        }
       }
 
       // generate break
@@ -264,17 +295,32 @@ export default function AddSlots({
         });
       }
 
-      // add buffer if last slot ends before day end
-      if (newSlots[newSlots.length - 1].end !== data.endTime) {
-        newSlots.push({
-          id: uuidv4(),
-          title: `Buffer`,
-          description: "",
-          start: newSlots[newSlots.length - 1].end,
-          end: data.endTime,
-          type: "buffer",
-        });
+      // generate buffer
+      if (numSlotsAfterBreak > 0) {
+        // add buffer if last slot ends before day end
+        if (newSlots[newSlots.length - 1].end < data.endTime) {
+          newSlots.push({
+            id: uuidv4(),
+            title: `Buffer`,
+            description: "",
+            start: newSlots[newSlots.length - 1].end,
+            end: data.endTime,
+            type: "buffer",
+          });
+        }
+      } else {
+        if (data.breakEndTime < data.endTime) {
+          newSlots.push({
+            id: uuidv4(),
+            title: `Buffer`,
+            description: "",
+            start: data.breakEndTime,
+            end: data.endTime,
+            type: "buffer",
+          });
+        }
       }
+
       return newSlots as slot[];
     };
 
@@ -294,7 +340,8 @@ export default function AddSlots({
     } else {
       const date = format(data.date as Date, "yyyy-MM-dd");
       const slotsToday = slots.filter((slot: slot) => slot.date === date);
-      const cleanedSlots: slot[] = [];
+      const cleanedSlots = [];
+      cleanedSlots.push(...slotsToday);
 
       for (const slot of newSlots) {
         if (
@@ -309,13 +356,83 @@ export default function AddSlots({
         }
       }
 
+      // add buffer slots
+      const sortedSlots = cleanedSlots.sort((a, b) =>
+        a.start < b.start ? -1 : 1
+      );
+      console.log(sortedSlots);
+
+      if (sortedSlots.length === 0) {
+        setOpen(false);
+        return;
+      }
+
+      const dayStart = data.startTime;
+      const dayEnd = data.endTime;
+
+      for (let i = 0; i < sortedSlots.length; i++) {
+        const slot = sortedSlots[i];
+        const slotStart = slot.start;
+        const slotEnd = slot.end;
+
+        const nextSlot = sortedSlots[i + 1];
+        if (nextSlot === undefined) {
+          continue;
+        }
+        const nextSlotStart = nextSlot.start;
+
+        if (i === 0) {
+          if (slotStart > dayStart) {
+            cleanedSlots.push({
+              id: uuidv4(),
+              title: "Buffer",
+              description: "",
+              start: dayStart,
+              end: slotStart,
+              type: "buffer",
+            });
+          }
+          if (slotEnd < nextSlotStart) {
+            cleanedSlots.push({
+              id: uuidv4(),
+              title: "Buffer",
+              description: "",
+              start: slotEnd,
+              end: nextSlotStart,
+              type: "buffer",
+            });
+          }
+        } else if (i === sortedSlots.length - 1 && slotEnd < dayEnd) {
+          cleanedSlots.push({
+            id: uuidv4(),
+            title: "Buffer",
+            description: "",
+            start: slotEnd,
+            end: dayEnd,
+            type: "buffer",
+          });
+        } else if (slotEnd < nextSlotStart) {
+          cleanedSlots.push({
+            id: uuidv4(),
+            title: "Buffer",
+            description: "",
+            start: slotEnd,
+            end: nextSlotStart,
+            type: "buffer",
+          });
+        }
+      }
+
       const dateAdded = cleanedSlots.map((s) => ({
         ...s,
         date,
       }));
 
-      setSlots((prev) => [...prev, ...dateAdded]);
-      setSpecificDates((prev) => prev.add(date));
+      setSlots((prev) => {
+        const temp = prev.filter((s) => s.date !== date);
+        return [...temp, ...(dateAdded as slot[])];
+      });
+      setSpecificDates((prev) => new Set(prev).add(date));
     }
     setOpen(false);
   };

@@ -9,7 +9,7 @@ export default function DialogDemo() {
   const [open, setOpen] = useState(false);
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button onClick={() => setOpen(true)}>Add</Button>
       </DialogTrigger>

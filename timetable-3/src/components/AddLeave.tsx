@@ -25,7 +25,7 @@ export default function AddLeave({
 }: {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const { slots, setSlots } = useTimetable();
+  const { slots, setSlots, specificDates } = useTimetable();
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   const timeSchema = z
     .string()
@@ -108,89 +108,111 @@ export default function AddLeave({
   });
 
   function addLeave(data: z.infer<typeof formSchema>) {
-    /**approach
-     * find all the slots on that day
-     *  - if there are no slots available on that date, it means that it uses default slots
-     *  - in this case, make a copy of all the default slots with date = this date
-     * find all the slots that intersect with the leave timings and remove them
-     * push the leave slots
+    /**
+     * if user has specific schedule today:
+     *  - find all the today's slots that intersect with the leave timings and remove them
+     *  - push the leave slot
+     *  - go through the day and add buffer if edited time is leaving time before/after neighboring slots
+     * else slots.push(leave)
      */
 
-    const leaveDate = format(data.date as Date, "yyyy-MM-dd");
-    let slotsToday = slots.filter((slot: slot) => slot.date === leaveDate); // list of all slots on the day of leave
-
-    if (slotsToday.length === 0) {
-      const defaultSlots = slots.filter((s) => s.date === "default");
-
-      slotsToday = defaultSlots.map((e) => {
-        return { ...e, id: `${e.id}-${leaveDate}`, date: leaveDate };
-      });
-    }
-
+    const leaveDate = format(data.date, "yyyy-MM-dd");
     const leaveStart = data.startTime;
     const leaveEnd = data.endTime;
 
-    const remainingSlots = slotsToday.filter((slot: slot) => {
-      if (slot.type === "break") return true;
-      return !isOverlaping(
-        { start: slot.start, end: slot.end },
-        { start: leaveStart, end: leaveEnd }
-      );
-    });
-
-    const leaveSlot = {
-      id: uuidv4(),
-      title: "Leave",
-      description: "",
-      start: leaveStart,
-      end: leaveEnd,
-      date: leaveDate,
-      type: "leave",
-    };
-    remainingSlots.push(leaveSlot as slot);
-
-    // add buffer if edited time is leaving time before/after neighboring slots
-    const sortedSlotsToday = remainingSlots.sort((a, b) =>
-      a.start < b.start ? -1 : 1
+    // check if intersecting with any other leave
+    const leavesToday = slots.filter(
+      (s) => s.type === "leave" && s.date === leaveDate
     );
 
-    let slotBefore, slotAfter;
-    for (let i = 0; i < sortedSlotsToday.length; i++) {
-      const slot = sortedSlotsToday[i];
-      if (slot.id === leaveSlot.id) {
-        slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
-        slotAfter =
-          i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
+    if (
+      leavesToday.some((s) =>
+        isOverlaping(
+          { start: s.start, end: s.end },
+          { start: leaveStart, end: leaveEnd }
+        )
+      )
+    ) {
+      form.setError("root", {
+        message: "This leave is overlapping with another leave",
+        type: "manual",
+      });
+      return;
+    }
+
+    if (specificDates.has(leaveDate)) {
+      const slotsToday = slots.filter((s) => s.date === leaveDate);
+      const cleanedSlots = slotsToday.filter(
+        (s) =>
+          !isOverlaping(
+            { start: s.start, end: s.end },
+            { start: leaveStart, end: leaveEnd }
+          )
+      );
+      const id = uuidv4();
+      cleanedSlots.push({
+        id,
+        date: leaveDate,
+        start: leaveStart,
+        end: leaveEnd,
+        title: "Leave",
+        description: "",
+        type: "leave",
+      });
+
+      const sortedSlots = cleanedSlots.sort((a, b) =>
+        a.start < b.start ? -1 : 1
+      );
+
+      const i = sortedSlots.findIndex((s) => s.id === id);
+
+      if (i > 0) {
+        const prevSlot = sortedSlots[i - 1];
+        if (prevSlot.end < leaveStart) {
+          sortedSlots.push({
+            id: uuidv4(),
+            date: leaveDate,
+            start: prevSlot.end,
+            end: leaveStart,
+            title: "Buffer",
+            description: "",
+            type: "buffer",
+          });
+        }
       }
+
+      if (i < sortedSlots.length - 1) {
+        const nextSlot = sortedSlots[i + 1];
+        if (leaveEnd < nextSlot.start) {
+          sortedSlots.push({
+            id: uuidv4(),
+            date: leaveDate,
+            start: leaveEnd,
+            end: nextSlot.start,
+            title: "Buffer",
+            description: "",
+            type: "buffer",
+          });
+        }
+      }
+
+      const remainingSlots = slots.filter((s) => s.date !== leaveDate);
+      setSlots([...remainingSlots, ...sortedSlots]);
+    } else {
+      setSlots((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          date: leaveDate,
+          start: leaveStart,
+          end: leaveEnd,
+          title: "Leave",
+          description: "",
+          type: "leave",
+        },
+      ]);
     }
 
-    if (slotBefore && slotBefore.end < leaveSlot.start) {
-      remainingSlots.push({
-        id: uuidv4(),
-        date: leaveDate,
-        start: slotBefore.end,
-        end: leaveSlot.start,
-        title: "Buffer",
-        description: "",
-        type: "buffer",
-      });
-    }
-
-    if (slotAfter && leaveSlot.end < slotAfter.start) {
-      remainingSlots.push({
-        id: uuidv4(),
-        date: leaveDate,
-        start: leaveSlot.end,
-        end: slotAfter.start,
-        title: "Buffer",
-        description: "",
-        type: "buffer",
-      });
-    }
-
-    const filteredSlots = slots.filter((s) => s.date !== leaveDate);
-    const updatedSlots = filteredSlots.concat(remainingSlots);
-    setSlots(updatedSlots);
     setOpen(false);
   }
 
@@ -210,6 +232,31 @@ export default function AddLeave({
       }
     }
   }, [watchHolidayType, watchHalfSession]);
+
+  // remove leave overlapping error if time is acceptable
+  const watchStartTime = form.watch("startTime");
+  const watchEndTime = form.watch("endTime");
+  const watchDate = form.watch("date");
+  useEffect(() => {
+    const leaveDate = format(watchDate as Date, "yyyy-MM-dd");
+
+    const leavesToday = slots.filter(
+      (s) => s.type === "leave" && s.date === leaveDate
+    );
+
+    if (
+      leavesToday.some((s) =>
+        isOverlaping(
+          { start: s.start, end: s.end },
+          { start: watchStartTime, end: watchEndTime }
+        )
+      )
+    ) {
+      return;
+    }
+
+    form.clearErrors("root");
+  }, [watchStartTime, watchEndTime, watchDate]);
 
   return (
     <Form {...form}>
@@ -347,6 +394,11 @@ export default function AddLeave({
               </FormItem>
             )}
           />
+          {form.formState.errors.root && (
+            <p className="text-destructive text-sm text-center">
+              {form.formState.errors.root.message}
+            </p>
+          )}
           <div className="w-full flex justify-center">
             <Button type="submit" className="w-fit">
               Add a Leave

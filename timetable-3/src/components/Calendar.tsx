@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from "uuid";
 import "../index.css";
 import { useEffect, useRef } from "react";
 import { useTimetable } from "@/hooks/useTimetable";
-import type { slot } from "@/types/types";
 import type {
   EventClickArg,
   EventInput,
@@ -15,7 +14,7 @@ import { format } from "date-fns";
 import { isOverlaping } from "@/lib/utils";
 
 export default function Calendar() {
-  const { slots, setSlots, specificDates } = useTimetable();
+  const { slots, specificDates } = useTimetable();
 
   const getSlotColor = (type: string) => {
     if (type === "slot") return "#118ab2";
@@ -100,6 +99,96 @@ export default function Calendar() {
             generated.push(event);
           }
         }
+
+        if (slots.length === 0) {
+          continue;
+        }
+      }
+
+      // add buffer slots
+      const sortedDefaultSlots = slots
+        .filter((s) => s.date === "default")
+        .sort((a, b) => (a.start < b.start ? -1 : 1));
+
+      if (sortedDefaultSlots.length === 0) {
+        continue;
+      }
+
+      const dayStart = sortedDefaultSlots[0].start;
+      const dayEnd = sortedDefaultSlots[sortedDefaultSlots.length - 1].end;
+      const allEventsToday = generated.filter(
+        (e) => format(e.start, "yyyy-MM-dd") === dateStr
+      );
+      const sortedAllEventsToday = allEventsToday.sort((a, b) => {
+        return a.start < b.start ? -1 : 1;
+      });
+
+      for (let i = 0; i < sortedAllEventsToday.length; i++) {
+        const event = sortedAllEventsToday[i];
+        const eventStart = format(event.start, "HH:mm");
+        const eventEnd = format(event.end, "HH:mm");
+        const nextEvent = sortedAllEventsToday[i + 1];
+        if (nextEvent === undefined) {
+          continue;
+        }
+        const nextEventStart = format(nextEvent.start, "HH:mm");
+
+        if (i === 0) {
+          if (eventStart > dayStart && !specificDates.has(dateStr)) {
+            generated.push({
+              id: uuidv4(),
+              title: "Buffer",
+              start: `${dateStr}T${dayStart}:00`,
+              end: `${dateStr}T${eventStart}:00`,
+              extendedProps: {
+                description: "",
+                type: "buffer",
+              },
+              color: getSlotColor("buffer"),
+            });
+          }
+          if (eventEnd < nextEventStart) {
+            generated.push({
+              id: uuidv4(),
+              title: "Buffer",
+              start: `${dateStr}T${eventEnd}:00`,
+              end: `${dateStr}T${nextEventStart}:00`,
+              extendedProps: {
+                description: "",
+                type: "buffer",
+              },
+              color: getSlotColor("buffer"),
+            });
+          }
+        } else if (
+          i === sortedAllEventsToday.length - 1 &&
+          eventEnd < dayEnd &&
+          !specificDates.has(dateStr)
+        ) {
+          generated.push({
+            id: uuidv4(),
+            title: "Buffer",
+            start: `${dateStr}T${eventEnd}:00`,
+            end: `${dateStr}T${dayEnd}:00`,
+            extendedProps: {
+              description: "",
+              type: "buffer",
+            },
+            color: getSlotColor("buffer"),
+          });
+        } else if (eventEnd < nextEventStart) {
+          generated.push({
+            id: uuidv4(),
+            title: "Buffer",
+            start: `${dateStr}T${eventEnd}:00`,
+            end: `${dateStr}T${nextEventStart}:00`,
+            extendedProps: {
+              description: "",
+              type: "buffer",
+            },
+            color: getSlotColor("buffer"),
+          });
+        }
       }
     }
     return generated;
@@ -132,102 +221,8 @@ export default function Calendar() {
     arg.jsEvent.stopPropagation();
   };
 
-  // if two adjacent slots are buffer slots, merge them
-  // if work slot overlaps with buffer/break, adjust buffer/break time
-  useEffect(() => {
-    /**
-     * group by date
-     * sort by start time
-     * if two adjacent slots are buffer slots, merge them
-     */
-
-    const groupedSlots = slots.reduce<Record<string, slot[]>>((acc, slot) => {
-      const date = slot.date;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(slot);
-      return acc;
-    }, {});
-
-    const groupedSortedSlots = Object.entries(groupedSlots).reduce<
-      Record<string, slot[]>
-    >((acc, [date, slots]) => {
-      acc[date] = slots.sort((a, b) => (a.start < b.start ? -1 : 1));
-      return acc;
-    }, {});
-
-    let isChangeSlots = false;
-
-    for (let [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
-      for (let i = 0; i < sortedSlots.length - 1; i++) {
-        // adjust buffer/break time
-        if (sortedSlots[i].end > sortedSlots[i + 1].start) {
-          if (
-            sortedSlots[i].type === "buffer" ||
-            sortedSlots[i].type === "break"
-          ) {
-            sortedSlots[i].end = sortedSlots[i + 1].start;
-            isChangeSlots = true;
-          } else if (
-            sortedSlots[i + 1].type === "buffer" ||
-            sortedSlots[i + 1].type === "break"
-          ) {
-            if (sortedSlots[i + 1].end > sortedSlots[i].end) {
-              sortedSlots[i + 1].start = sortedSlots[i].end;
-            } else {
-              sortedSlots = sortedSlots.filter((_, index) => index !== i + 1);
-            }
-            isChangeSlots = true;
-          }
-        }
-
-        // merge two adjacent buffer slots
-        if (
-          sortedSlots[i].type === "buffer" &&
-          sortedSlots[i + 1].type === "buffer" &&
-          sortedSlots[i].end === sortedSlots[i + 1].start
-        ) {
-          sortedSlots[i].end = sortedSlots[i + 1].end;
-          sortedSlots.splice(i + 1, 1);
-          isChangeSlots = true;
-        }
-      }
-      groupedSortedSlots[date] = sortedSlots;
-    }
-
-    //
-    for (const [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
-      for (let i = 0; i < sortedSlots.length; i++) {
-        if (sortedSlots[i].type === "buffer") {
-          for (let j = 0; j < sortedSlots.length; j++) {
-            if (
-              sortedSlots[j].start > sortedSlots[i].start &&
-              sortedSlots[j].end < sortedSlots[i].end
-            ) {
-              sortedSlots.push({
-                id: uuidv4(),
-                date,
-                start: sortedSlots[j].start,
-                end: sortedSlots[j].end,
-                type: "slot",
-                title: "Work Slot",
-                description: "",
-              });
-            }
-          }
-        }
-      }
-    }
-
-    if (isChangeSlots) {
-      const newSlots = Object.values(groupedSortedSlots).flat();
-      setSlots(newSlots);
-    }
-  }, [slots]);
-
   // Re-fetch events when slots change
-  const calendarRef = useRef(null);
+  const calendarRef = useRef<FullCalendar | null>(null);
   useEffect(() => {
     if (calendarRef.current) {
       calendarRef.current?.getApi().refetchEvents();
@@ -263,8 +258,8 @@ export default function Calendar() {
           showNonCurrentDates={false}
           // in dayGridView, only show from 8am to 8pm with 15 min gap
           slotDuration="00:15:00"
-          slotMinTime="08:00:00"
-          slotMaxTime="20:00:00"
+          // slotMinTime="08:00:00"
+          // slotMaxTime="20:00:00"
         />
       </div>
     </div>
