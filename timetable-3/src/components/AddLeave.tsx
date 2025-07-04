@@ -20,7 +20,11 @@ import { useEffect } from "react";
 import type { slot } from "@/Types/types";
 import { useTimetable } from "@/hooks/useTimetable";
 
-export default function AddLeave() {
+export default function AddLeave({
+  setOpen,
+}: {
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const { slots, setSlots } = useTimetable();
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   const timeSchema = z
@@ -187,6 +191,7 @@ export default function AddLeave() {
     const filteredSlots = slots.filter((s) => s.date !== leaveDate);
     const updatedSlots = filteredSlots.concat(remainingSlots);
     setSlots(updatedSlots);
+    setOpen(false);
   }
 
   const watchHolidayType = form.watch("holidayType");

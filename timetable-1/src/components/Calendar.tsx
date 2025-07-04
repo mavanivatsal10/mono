@@ -188,6 +188,29 @@ export default function Calendar({
       groupedSortedSlots[date] = sortedSlots;
     }
 
+    // 
+    for (let [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
+      for (let i = 0; i < sortedSlots.length; i++) {
+        if (sortedSlots[i].type === "buffer") {
+          for (let j = 0; j < sortedSlots.length; j++) {
+            if (
+              sortedSlots[j].start > sortedSlots[i].start && sortedSlots[j].end < sortedSlots[i].end
+            ) {
+              sortedSlots.push({
+                id: uuidv4(),
+                date,
+                start: sortedSlots[j].start,
+                end: sortedSlots[j].end,
+                type: "slot",
+                title: "Work Slot",
+                description: "",
+              })
+            }
+          }
+        }
+      }
+    }
+
     if (isChangeSlots) {
       const newSlots = Object.values(groupedSortedSlots).flat();
       setSlots(newSlots);

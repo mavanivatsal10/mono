@@ -14,14 +14,19 @@ import { z } from "zod";
 import DatePicker from "@/components/ui/date-picker";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
-import deepcopy from "deepcopy";
-import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { useTimetable } from "@/hooks/useTimetable";
 import type { slot } from "@/types/types";
+import { isOverlaping } from "@/lib/utils";
+import { format } from "date-fns";
 
-export default function AddSlots() {
-  const { slots, setSlots } = useTimetable();
+export default function AddSlots({
+  setOpen,
+}: {
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  const { slots, setSlots, setSpecificDates } = useTimetable();
+
   const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
   const timeSchema = z
     .string()
@@ -135,44 +140,50 @@ export default function AddSlots() {
 
   const getAllSlots = (data: z.infer<typeof formSchema>) => {
     /**
-     * deepcopy slots
-     * generate new slots based on current form data
-     * push to slots copy or replace default slots and then setSlots
+     * generate slots based on form values
+     * if set as default slot:
+     *  - if default slots already exist, replace them
+     *  - else push the generated slots
+     * else (generate slots for specific date): // same logic as Calendar.tsx's getEvents() function's else clause
+     *  - if there are slots available on that date, then push them
+     *  - loop through newly generated slots and push non-overlapping slots
+     *  - go through the day and add buffers for empty time blocks
+     *  - add this date to specific dates set
      */
 
-    // helper functions
-    const getTimeNumsFromString = (time: string) =>
-      time.split(":").map((t) => Number(t));
-    const getTimeStringFromNums = (hour: number, minute: number) => {
-      const hh = hour.toString().padStart(2, "0");
-      const mm = minute.toString().padStart(2, "0");
-      return `${hh}:${mm}`;
-    };
-    const addMinutes = (hour: number, minute: number, minutes: number) => {
-      const totalMinutes = hour * 60 + minute + minutes;
-      const newHour = Math.floor(totalMinutes / 60);
-      const newMinute = totalMinutes % 60;
-      return [newHour, newMinute];
-    };
-
-    // form values
-    const [startHour, startMinute] = getTimeNumsFromString(data.startTime);
-    const [endHour, endMinute] = getTimeNumsFromString(data.endTime);
-    const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
-      data.breakStartTime
-    );
-    const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
-      data.breakEndTime
-    );
-    const beforeBreakMinutes =
-      (breakStartHour - startHour) * 60 + breakStartMinute - startMinute;
-    const afterBreakMinutes =
-      (endHour - breakEndHour) * 60 + endMinute - breakEndMinute;
-    const slotMinutes = parseInt(data.slotDuration);
-    const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
-    const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
-
     const generateNewSlots = () => {
+      // helper functions
+      const getTimeNumsFromString = (time: string) =>
+        time.split(":").map((t) => Number(t));
+      const getTimeStringFromNums = (hour: number, minute: number) => {
+        const hh = hour.toString().padStart(2, "0");
+        const mm = minute.toString().padStart(2, "0");
+        return `${hh}:${mm}`;
+      };
+      const addMinutes = (hour: number, minute: number, minutes: number) => {
+        const totalMinutes = hour * 60 + minute + minutes;
+        const newHour = Math.floor(totalMinutes / 60);
+        const newMinute = totalMinutes % 60;
+        return [newHour, newMinute];
+      };
+
+      // form values
+      const [startHour, startMinute] = getTimeNumsFromString(data.startTime);
+      const [endHour, endMinute] = getTimeNumsFromString(data.endTime);
+      const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
+        data.breakStartTime
+      );
+      const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
+        data.breakEndTime
+      );
+      const beforeBreakMinutes =
+        (breakStartHour - startHour) * 60 + breakStartMinute - startMinute;
+      const afterBreakMinutes =
+        (endHour - breakEndHour) * 60 + endMinute - breakEndMinute;
+      const slotMinutes = parseInt(data.slotDuration);
+      const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
+      const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
+
       const newSlots = [];
 
       // generate slots before break
@@ -269,37 +280,44 @@ export default function AddSlots() {
 
     const newSlots = generateNewSlots();
 
-    let updatedNewSlots: slot[];
-    if (watchIsDefault) {
-      updatedNewSlots = newSlots.map((slot) => {
-        return {
-          ...slot,
-          date: "default",
-        };
-      });
-    } else {
-      updatedNewSlots = newSlots.map((slot) => {
-        return {
-          ...slot,
-          date: format(data.date as Date, "yyyy-MM-dd"),
-        };
-      });
-    }
-
-    const currentSlots = deepcopy(slots);
-
-    // find all slots that are on the given day, and then replace them with new slots
-    let cleanCurrentSlots;
-    if (watchIsDefault) {
-      cleanCurrentSlots = currentSlots.filter(
-        (slot) => slot.date !== "default"
+    if (data.isDefault) {
+      const remainingSlots = slots.filter(
+        (slot: slot) => slot.date !== "default"
       );
+
+      const dateAdded = newSlots.map((s) => ({
+        ...s,
+        date: "default",
+      }));
+
+      setSlots([...remainingSlots, ...dateAdded]);
     } else {
-      cleanCurrentSlots = currentSlots.filter(
-        (slot) => slot.date !== format(data.date as Date, "yyyy-MM-dd")
-      );
+      const date = format(data.date as Date, "yyyy-MM-dd");
+      const slotsToday = slots.filter((slot: slot) => slot.date === date);
+      const cleanedSlots: slot[] = [];
+
+      for (const slot of newSlots) {
+        if (
+          !slotsToday.some((s) =>
+            isOverlaping(
+              { start: s.start, end: s.end },
+              { start: slot.start, end: slot.end }
+            )
+          )
+        ) {
+          cleanedSlots.push(slot);
+        }
+      }
+
+      const dateAdded = cleanedSlots.map((s) => ({
+        ...s,
+        date,
+      }));
+
+      setSlots((prev) => [...prev, ...dateAdded]);
+      setSpecificDates((prev) => prev.add(date));
     }
-    setSlots([...cleanCurrentSlots, ...updatedNewSlots]);
+    setOpen(false);
   };
 
   return (

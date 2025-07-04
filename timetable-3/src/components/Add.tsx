@@ -1,18 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import type { slot } from "@/types/types";
-import { useTimetable } from "@/hooks/useTimetable";
 import AddSlots from "./AddSlots";
 import AddLeave from "./AddLeave";
+import { useState } from "react";
 
 export default function DialogDemo() {
-  const { slots } = useTimetable();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Dialog>
+    <Dialog open={open}>
       <DialogTrigger asChild>
-        <Button>Add</Button>
+        <Button onClick={() => setOpen(true)}>Add</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Tabs
@@ -28,10 +27,10 @@ export default function DialogDemo() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="slots" className="w-full h-full">
-            <AddSlots />
+            <AddSlots setOpen={setOpen} />
           </TabsContent>
           <TabsContent value="leave" className="w-full h-full">
-            <AddLeave />
+            <AddLeave setOpen={setOpen} />
           </TabsContent>
         </Tabs>
       </DialogContent>

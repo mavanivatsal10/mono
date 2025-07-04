@@ -12,3 +12,10 @@
     - the extra time left should have a buffer slot
     - if two buffer slots are adjacent, they should be merged
     - if the edited time / short leave time is overlapping with a buffer or break, buffer/break time should be adjusted
+
+-----------------
+
+responsive
+only edited slot should stay intect
+leave should be added regardless of slots state
+full leave should clear all slots

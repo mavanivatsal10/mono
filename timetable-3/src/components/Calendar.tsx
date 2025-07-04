@@ -3,11 +3,19 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { v4 as uuidv4 } from "uuid";
 import "../index.css";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTimetable } from "@/hooks/useTimetable";
+import type { slot } from "@/types/types";
+import type {
+  EventClickArg,
+  EventInput,
+  EventSourceFuncArg,
+} from "@fullcalendar/core/index.js";
+import { format } from "date-fns";
+import { isOverlaping } from "@/lib/utils";
 
 export default function Calendar() {
-  const { slots, setSlots } = useTimetable();
+  const { slots, setSlots, specificDates } = useTimetable();
 
   const getSlotColor = (type: string) => {
     if (type === "slot") return "#118ab2";
@@ -16,66 +24,86 @@ export default function Calendar() {
     else if (type === "leave") return "red";
   };
 
-  // const getEvents = (info) => {
-  //   /**
-  //    * generate a list of dates for which there are slots defined
-  //    * for each date in the visible range (info.start, info.end),
-  //    *     if there are events on that date, then push them
-  //    *     else push the default events
-  //    */
+  const getEvents = (info: EventSourceFuncArg) => {
+    /**
+     * loop through visible dates on calendar
+     *  - if the user has set a specific schedule on that date, then push them
+     *  - else:
+     *     - if there are slots available on that date, then push them
+     *     - loop through default slots and push non-overlapping slots
+     *     - go through the day and add buffers for empty time blocks
+     */
 
-  //   const start = info.start;
-  //   const end = info.end;
-  //   const specificDates = getSpecificDates(slots);
+    const start = info.start;
+    const end = info.end;
+    const generated: EventInput[] = [];
 
-  //   const generated = [];
+    for (
+      let date = new Date(start);
+      date <= end;
+      date.setDate(date.getDate() + 1)
+    ) {
+      const dateStr = format(date, "yyyy-MM-dd");
+      if (specificDates.has(dateStr)) {
+        const allSlots = slots.filter((s) => s.date === dateStr);
+        const events = allSlots.map((s) => ({
+          id: uuidv4(),
+          title: s.title,
+          start: `${dateStr}T${s.start}:00`,
+          end: `${dateStr}T${s.end}:00`,
+          extendedProps: {
+            description: s.description,
+            type: s.type,
+            slotId: s.id,
+          },
+          color: getSlotColor(s.type),
+        }));
+        generated.push(...events);
+      } else {
+        const slotsToday = slots.filter((s) => s.date === dateStr);
+        const eventsToday = slotsToday.map((s) => ({
+          id: uuidv4(),
+          title: s.title,
+          start: `${dateStr}T${s.start}:00`,
+          end: `${dateStr}T${s.end}:00`,
+          extendedProps: {
+            description: s.description,
+            type: s.type,
+            slotId: s.id,
+          },
+          color: getSlotColor(s.type),
+        }));
+        generated.push(...eventsToday);
+        const defaultSlots = slots.filter((s) => s.date === "default");
 
-  //   for (
-  //     let date = new Date(start);
-  //     date <= end;
-  //     date.setDate(date.getDate() + 1)
-  //   ) {
-  //     const dateStr = format(date, "yyyy-MM-dd");
-
-  //     if (specificDates.has(dateStr)) {
-  //       const slotsToday = slots.filter(
-  //         (s) => s.date === dateStr && s.type !== "no-events"
-  //       );
-  //       const eventList = slotsToday.map((slot) => {
-  //         return {
-  //           id: uuidv4(),
-  //           title: slot.title,
-  //           start: new Date(`${dateStr}T${slot.start}:00`),
-  //           end: new Date(`${dateStr}T${slot.end}:00`),
-  //           extendedProps: {
-  //             description: slot.description,
-  //             slotId: slot.id,
-  //           },
-  //           color: getSlotColor(slot.type),
-  //         };
-  //       });
-
-  //       generated.push(...eventList);
-  //     } else {
-  //       const defaultSlots = slots.filter((slot) => slot.date === "default");
-  //       const eventList = defaultSlots.map((slot) => {
-  //         return {
-  //           id: uuidv4(),
-  //           title: slot.title,
-  //           start: new Date(`${dateStr}T${slot.start}:00`),
-  //           end: new Date(`${dateStr}T${slot.end}:00`),
-  //           extendedProps: {
-  //             description: slot.description,
-  //             slotId: slot.id,
-  //           },
-  //           color: getSlotColor(slot.type),
-  //         };
-  //       });
-  //       generated.push(...eventList);
-  //     }
-  //   }
-  //   return generated;
-  // };
+        for (const dslot of defaultSlots) {
+          if (
+            !slotsToday.some((s) =>
+              isOverlaping(
+                { start: s.start, end: s.end },
+                { start: dslot.start, end: dslot.end }
+              )
+            )
+          ) {
+            const event = {
+              id: uuidv4(),
+              title: dslot.title,
+              start: `${dateStr}T${dslot.start}:00`,
+              end: `${dateStr}T${dslot.end}:00`,
+              extendedProps: {
+                description: dslot.description,
+                type: dslot.type,
+                slotId: dslot.id,
+              },
+              color: getSlotColor(dslot.type),
+            };
+            generated.push(event);
+          }
+        }
+      }
+    }
+    return generated;
+  };
 
   // adjust popover position if it goes out of the viewport
   useEffect(() => {
@@ -100,8 +128,8 @@ export default function Calendar() {
     return () => observer.disconnect();
   }, []);
 
-  const handleEventClick = (info) => {
-    info.jsEvent.stopPropagation();
+  const handleEventClick = (arg: EventClickArg) => {
+    arg.jsEvent.stopPropagation();
   };
 
   // if two adjacent slots are buffer slots, merge them
@@ -113,7 +141,7 @@ export default function Calendar() {
      * if two adjacent slots are buffer slots, merge them
      */
 
-    const groupedSlots = slots.reduce((acc, slot) => {
+    const groupedSlots = slots.reduce<Record<string, slot[]>>((acc, slot) => {
       const date = slot.date;
       if (!acc[date]) {
         acc[date] = [];
@@ -122,24 +150,19 @@ export default function Calendar() {
       return acc;
     }, {});
 
-    const groupedSortedSlots = Object.entries(groupedSlots).reduce(
-      (acc, [date, slots]) => {
-        acc[date] = slots.sort((a, b) =>
-          compareTime(a.start, "isBefore", b.start) ? -1 : 1
-        );
-        return acc;
-      },
-      {}
-    );
+    const groupedSortedSlots = Object.entries(groupedSlots).reduce<
+      Record<string, slot[]>
+    >((acc, [date, slots]) => {
+      acc[date] = slots.sort((a, b) => (a.start < b.start ? -1 : 1));
+      return acc;
+    }, {});
 
     let isChangeSlots = false;
 
     for (let [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
       for (let i = 0; i < sortedSlots.length - 1; i++) {
         // adjust buffer/break time
-        if (
-          compareTime(sortedSlots[i].end, "isAfter", sortedSlots[i + 1].start)
-        ) {
+        if (sortedSlots[i].end > sortedSlots[i + 1].start) {
           if (
             sortedSlots[i].type === "buffer" ||
             sortedSlots[i].type === "break"
@@ -163,7 +186,7 @@ export default function Calendar() {
         if (
           sortedSlots[i].type === "buffer" &&
           sortedSlots[i + 1].type === "buffer" &&
-          compareTime(sortedSlots[i].end, "isSame", sortedSlots[i + 1].start)
+          sortedSlots[i].end === sortedSlots[i + 1].start
         ) {
           sortedSlots[i].end = sortedSlots[i + 1].end;
           sortedSlots.splice(i + 1, 1);
@@ -174,7 +197,7 @@ export default function Calendar() {
     }
 
     //
-    for (let [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
+    for (const [date, sortedSlots] of Object.entries(groupedSortedSlots)) {
       for (let i = 0; i < sortedSlots.length; i++) {
         if (sortedSlots[i].type === "buffer") {
           for (let j = 0; j < sortedSlots.length; j++) {
@@ -203,14 +226,23 @@ export default function Calendar() {
     }
   }, [slots]);
 
+  // Re-fetch events when slots change
+  const calendarRef = useRef(null);
+  useEffect(() => {
+    if (calendarRef.current) {
+      calendarRef.current?.getApi().refetchEvents();
+    }
+  }, [slots]);
+
   return (
     <div>
       <div className="flex-1 p-8">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin]}
           initialView="dayGridMonth"
           events={(info, onSuccess) => {
-            const events = slots; // getEvents(info);
+            const events = getEvents(info);
             onSuccess(events);
           }}
           eventClick={handleEventClick}
