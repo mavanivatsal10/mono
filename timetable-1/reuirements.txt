@@ -8,10 +8,14 @@
 08. done: add validation for time edit in any event
 09. done: when editing time, the new time should not overlap with any other working slot
 10. done: add colors for different types of slots
-11. when editing a slot OR adding a short leave, the extra time left should have a buffer slot
-12. done: if two buffer slots are adjacent, they should be merged
-13. done: if the edited time / short leave time is overlapping with a buffer or break, buffer/break time should be adjusted
-14. when editing leave timings:
-    - if the leave start time was day start, add a buffer if the edited start time is after day start 
-    - if the leave end time was day end, add a buffer if the edited end time is before day end
-    - if the buffer length is more than working slot time, add slot(s) and buffer (if needed)
+11. done: when editing a slot OR adding a short leave:
+    - the extra time left should have a buffer slot
+    - if two buffer slots are adjacent, they should be merged
+    - if the edited time / short leave time is overlapping with a buffer or break, buffer/break time should be adjusted
+
+-----------------
+
+responsive
+only edited slot should stay intect
+leave should be added regardless of slots state
+full leave should clear all slots
