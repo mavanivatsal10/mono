@@ -14,7 +14,7 @@ export const TimetableProvider = ({
       description: "default slot description",
       start: "09:30",
       end: "10:30",
-      date: "2025-07-04",
+      date: "2025-07-06",
       type: "slot",
     },
     {
@@ -23,7 +23,7 @@ export const TimetableProvider = ({
       description: "default slot description",
       start: "15:30",
       end: "17:00",
-      date: "2025-07-03",
+      date: "2025-07-07",
       type: "slot",
     },
   ]);

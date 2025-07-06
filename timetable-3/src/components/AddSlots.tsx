@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import {
   Form,
   FormControl,
@@ -17,8 +17,15 @@ import { Label } from "./ui/label";
 import { v4 as uuidv4 } from "uuid";
 import { useTimetable } from "@/hooks/useTimetable";
 import type { slot } from "@/types/types";
-import { isOverlaping } from "@/lib/utils";
+import {
+  isOverlaping,
+  getTimeNumsFromString,
+  getTimeStringFromNums,
+  addMinutes,
+  calculateSlotMinutes,
+} from "@/lib/utils";
 import { format } from "date-fns";
+import { X } from "lucide-react";
 
 export default function AddSlots({
   setOpen,
@@ -37,89 +44,135 @@ export default function AddSlots({
       title: z.string().min(1, "Title is required"),
       description: z.string(),
       date: z.union([z.date().nullable(), z.literal("default")]),
-      isDefault: z.boolean(), //.optional(),
+      isDefault: z.boolean(),
       startTime: timeSchema,
       endTime: timeSchema,
-      breakStartTime: timeSchema,
-      breakEndTime: timeSchema,
+      breaks: z.array(
+        z.object({
+          startTime: timeSchema,
+          endTime: timeSchema,
+        })
+      ),
       slotDuration: z.string(),
     })
-    .refine(
-      (data) => {
-        return data.startTime < data.endTime || data.startTime === data.endTime;
-      },
-      {
-        message: "End time must be on or after start time.",
-        path: ["endTime"],
+    .superRefine((data, ctx) => {
+      if (data.startTime > data.endTime || data.startTime === data.endTime) {
+        ctx.addIssue({
+          message: "End time must be after start time.",
+          path: ["endTime"],
+          code: z.ZodIssueCode.custom,
+        });
       }
-    )
-    .refine(
-      (data) => {
-        return (
-          data.breakStartTime < data.breakEndTime ||
-          data.breakStartTime === data.breakEndTime
-        );
-      },
-      {
-        message: "Break end time must be on or after break start time.",
-        path: ["breakEndTime"],
+
+      if (!Number.isInteger(Number(data.slotDuration))) {
+        ctx.addIssue({
+          message: "Slot duration must be an integer.",
+          path: ["slotDuration"],
+          code: z.ZodIssueCode.custom,
+        });
       }
-    )
-    .refine(
-      (data) => {
-        return (
-          (data.startTime < data.breakStartTime ||
-            data.startTime === data.breakStartTime) &&
-          (data.breakStartTime < data.endTime ||
-            data.breakStartTime === data.endTime)
-        );
-      },
-      {
-        message: "Break start time must be between start time and end time.",
-        path: ["breakStartTime"],
+
+      if (Number(data.slotDuration) < 15) {
+        ctx.addIssue({
+          message: "Slot duration must be at least 15 minutes.",
+          path: ["slotDuration"],
+          code: z.ZodIssueCode.custom,
+        });
       }
-    )
-    .refine(
-      (data) => {
-        return (
-          (data.startTime < data.breakEndTime ||
-            data.startTime === data.breakEndTime) &&
-          (data.breakEndTime < data.endTime ||
-            data.breakEndTime === data.endTime)
-        );
-      },
-      {
-        message: "Break end time must be between start time and end time.",
-        path: ["breakEndTime"],
+
+      if (calculateSlotMinutes(data) < Number(data.slotDuration)) {
+        ctx.addIssue({
+          message: "Slot duration must not exceed total day time.",
+          path: ["slotDuration"],
+          code: z.ZodIssueCode.custom,
+        });
       }
-    )
-    .refine(
-      (data) => {
-        return Number.isInteger(Number(data.slotDuration));
-      },
-      {
-        message: "Slot duration must be an integer",
-        path: ["slotDuration"],
+
+      if (!data.isDefault && !data.date) {
+        ctx.addIssue({
+          message: "Date is required.",
+          path: ["date"],
+          code: z.ZodIssueCode.custom,
+        });
       }
-    )
-    .refine(
-      (data) => {
-        return Number(data.slotDuration) > 0;
-      },
-      {
-        message: "Slot duration must be greater than 0",
-        path: ["slotDuration"],
-      }
-    )
-    .refine(
-      (data) => {
-        return data.date !== null || data.isDefault;
-      },
-      {
-        message: "Either select a slot date or make it as default slot value",
-        path: ["slotDateError"],
-      }
-    );
+
+      data.breaks.forEach((breakItem, index) => {
+        if (
+          breakItem.startTime < data.startTime ||
+          breakItem.startTime > data.endTime
+        ) {
+          ctx.addIssue({
+            message:
+              "Break start time must be between start time and end time.",
+            path: ["breaks", index, "startTime"],
+            code: z.ZodIssueCode.custom,
+          });
+        }
+
+        if (
+          breakItem.endTime < data.startTime ||
+          breakItem.endTime > data.endTime
+        ) {
+          ctx.addIssue({
+            message: "Break end time must be between start time and end time.",
+            path: ["breaks", index, "endTime"],
+            code: z.ZodIssueCode.custom,
+          });
+        }
+
+        if (
+          data.breaks.some(
+            (otherBreak, otherIndex) =>
+              otherIndex !== index &&
+              isOverlaping(
+                { start: breakItem.startTime, end: breakItem.endTime },
+                { start: otherBreak.startTime, end: otherBreak.endTime }
+              )
+          )
+        ) {
+          ctx.addIssue({
+            message: "Breaks cannot overlap.",
+            path: ["breaks", index],
+            code: z.ZodIssueCode.custom,
+          });
+        }
+
+        if (
+          breakItem.endTime < breakItem.startTime ||
+          breakItem.endTime === breakItem.startTime
+        ) {
+          ctx.addIssue({
+            message: "Break end time must be after break start time.",
+            path: ["breaks", index, "endTime"],
+            code: z.ZodIssueCode.custom,
+          });
+        }
+
+        const breakMins = calculateSlotMinutes(breakItem);
+
+        if (breakMins > 45) {
+          ctx.addIssue({
+            message: "Breaks cannot be longer than 45 minutes.",
+            path: ["breaks", index],
+            code: z.ZodIssueCode.custom,
+          });
+        } else if (breakMins > 15) {
+          const longestBreak = data.breaks.reduce((prev, curr) => {
+            const prevMins = calculateSlotMinutes(prev);
+            const currMins = calculateSlotMinutes(curr);
+            return prevMins > currMins ? prev : curr;
+          });
+          const longestBreakMins = calculateSlotMinutes(longestBreak);
+          if (longestBreak !== breakItem && longestBreakMins > 15) {
+            ctx.addIssue({
+              message: "Only one long break (> 15 minutes) is allowed.",
+              path: ["breaks", index],
+              code: z.ZodIssueCode.custom,
+            });
+          }
+        }
+      });
+    });
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -130,10 +183,18 @@ export default function AddSlots({
       isDefault: true,
       startTime: "09:00",
       endTime: "18:30",
-      breakStartTime: "13:00",
-      breakEndTime: "13:45",
+      breaks: [{ startTime: "13:00", endTime: "13:45" }],
       slotDuration: "60",
     },
+  });
+
+  const {
+    fields: breaksFields,
+    append: breaksAppend,
+    remove: breaksRemove,
+  } = useFieldArray({
+    name: "breaks",
+    control: form.control,
   });
 
   const watchIsDefault = form.watch("isDefault");
@@ -153,175 +214,237 @@ export default function AddSlots({
 
     const generateNewSlots = () => {
       /**
-       * calculate num slots before break and num slots after break
-       * if num slots before break > 0, add work slots
-       * add buffer:
-       *  - if num slots before break > 0
-       *     - if last slot ends before break, add buffer
-       *  - else (no work slots before break)
-       *     - if dayStart before break start, add buffer
-       * add break
-       * if num slots after break > 0, add work slots
-       * add buffer:
-       *  - if num slots after break > 0
+       * calculate number of breaks and loop that many times
+       *  - generate slots before break
+       *     - calculate # slots before break
+       *     - if # slots before break > 0
+       *        - add work slots
+       *        - if last slot ends before break start, add buffer
+       *     - else (no work slots before break)
+       *        - if dayStart/prevSlotEnd before break start, add buffer
+       *  - generate break
+       * generate slots after last break
+       *  - calculate # slots after last break
+       *  - if # slots after last break > 0
+       *     - add work slots
        *     - if last slot ends before day end, add buffer
        *  - else (no work slots after break)
        *     - if dayEnd after break end, add buffer
        */
 
-      // helper functions
-      const getTimeNumsFromString = (time: string) =>
-        time.split(":").map((t) => Number(t));
-      const getTimeStringFromNums = (hour: number, minute: number) => {
-        const hh = hour.toString().padStart(2, "0");
-        const mm = minute.toString().padStart(2, "0");
-        return `${hh}:${mm}`;
-      };
-      const addMinutes = (hour: number, minute: number, minutes: number) => {
-        const totalMinutes = hour * 60 + minute + minutes;
-        const newHour = Math.floor(totalMinutes / 60);
-        const newMinute = totalMinutes % 60;
-        return [newHour, newMinute];
-      };
-
       // form values
-      const [startHour, startMinute] = getTimeNumsFromString(data.startTime);
-      const [endHour, endMinute] = getTimeNumsFromString(data.endTime);
-      const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
-        data.breakStartTime
+      const [dayStartHour, dayStartMinute] = getTimeNumsFromString(
+        data.startTime
       );
-      const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
-        data.breakEndTime
-      );
-      const beforeBreakMinutes =
-        (breakStartHour - startHour) * 60 + breakStartMinute - startMinute;
-      const afterBreakMinutes =
-        (endHour - breakEndHour) * 60 + endMinute - breakEndMinute;
-      const slotMinutes = parseInt(data.slotDuration);
-      const numSlotsBeforeBreak = Math.floor(beforeBreakMinutes / slotMinutes);
-      const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
+      const [dayEndHour, dayEndMinute] = getTimeNumsFromString(data.endTime);
+      const slotMinutes = Number(data.slotDuration);
+      const numBreaks = data.breaks.length;
 
-      const newSlots = [];
+      const newSlots: {
+        id: string;
+        title: string;
+        description: string;
+        start: string;
+        end: string;
+        type: "slot" | "buffer" | "break";
+      }[] = [];
 
-      // generate slots before break
-      for (let i = 0; i < numSlotsBeforeBreak; i++) {
-        const [slotStartHour, slotStartMinute] = addMinutes(
-          startHour,
-          startMinute,
-          i * slotMinutes
+      // loop through # (number of) breaks
+      for (let i = 0; i < numBreaks; i++) {
+        const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
+          data.breaks[i].startTime
         );
-        const [slotEndHour, slotEndMinute] = addMinutes(
-          startHour,
-          startMinute,
-          (i + 1) * slotMinutes
+        const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
+          data.breaks[i].endTime
         );
 
-        const slotStartTime = getTimeStringFromNums(
-          slotStartHour,
-          slotStartMinute
+        let beforeBreakMinutes = 0;
+        if (i === 0) {
+          beforeBreakMinutes =
+            (breakStartHour - dayStartHour) * 60 +
+            breakStartMinute -
+            dayStartMinute;
+        } else {
+          const [prevBreakEndHour, prevBreakEndMinute] = getTimeNumsFromString(
+            data.breaks[i - 1].endTime
+          );
+          beforeBreakMinutes =
+            (breakStartHour - prevBreakEndHour) * 60 +
+            breakStartMinute -
+            prevBreakEndMinute;
+        }
+        const numSlotsBeforeBreak = Math.floor(
+          beforeBreakMinutes / slotMinutes
         );
-        const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
+
+        if (numSlotsBeforeBreak > 0) {
+          // generate work slots before break
+          for (let j = 0; j < numSlotsBeforeBreak; j++) {
+            let slotStartHour, slotStartMinute, slotEndHour, slotEndMinute;
+            if (i === 0) {
+              [slotStartHour, slotStartMinute] = addMinutes(
+                dayStartHour,
+                dayStartMinute,
+                j * slotMinutes
+              );
+              [slotEndHour, slotEndMinute] = addMinutes(
+                dayStartHour,
+                dayStartMinute,
+                (j + 1) * slotMinutes
+              );
+            } else {
+              const [prevBreakEndHour, prevBreakEndMinute] =
+                getTimeNumsFromString(data.breaks[i - 1].endTime);
+              [slotStartHour, slotStartMinute] = addMinutes(
+                prevBreakEndHour,
+                prevBreakEndMinute,
+                j * slotMinutes
+              );
+              [slotEndHour, slotEndMinute] = addMinutes(
+                prevBreakEndHour,
+                prevBreakEndMinute,
+                (j + 1) * slotMinutes
+              );
+            }
+
+            const slotStart = getTimeStringFromNums(
+              slotStartHour,
+              slotStartMinute
+            );
+            const slotEnd = getTimeStringFromNums(slotEndHour, slotEndMinute);
+
+            newSlots.push({
+              id: uuidv4(),
+              title: "Work Slot",
+              description: "",
+              start: slotStart,
+              end: slotEnd,
+              type: "slot",
+            });
+          }
+
+          // generate buffer slot if last slot ends before break start
+          if (newSlots[newSlots.length - 1].end < data.breaks[i].startTime) {
+            const lastSlot = newSlots[newSlots.length - 1];
+            newSlots.push({
+              id: uuidv4(),
+              title: "Buffer Slot",
+              description: "",
+              start: lastSlot.end,
+              end: data.breaks[i].startTime,
+              type: "buffer",
+            });
+          }
+        } else {
+          if (i === 0) {
+            if (data.startTime < data.breaks[i].startTime) {
+              newSlots.push({
+                id: uuidv4(),
+                title: "Buffer Slot",
+                description: "",
+                start: data.startTime,
+                end: data.breaks[i].startTime,
+                type: "buffer",
+              });
+            }
+          } else {
+            const prevSlot = newSlots[newSlots.length - 1];
+            if (prevSlot.end < data.breaks[i].startTime) {
+              newSlots.push({
+                id: uuidv4(),
+                title: "Buffer Slot",
+                description: "",
+                start: prevSlot.end,
+                end: data.breaks[i].startTime,
+                type: "buffer",
+              });
+            }
+          }
+        }
+
+        // generate break slot
         newSlots.push({
           id: uuidv4(),
-          title: `Work Slot`,
+          title: "Break",
           description: "",
-          start: slotStartTime,
-          end: slotEndTime,
-          type: "slot",
+          start: data.breaks[i].startTime,
+          end: data.breaks[i].endTime,
+          type: "break",
         });
       }
 
-      // geneate buffer
-      if (numSlotsBeforeBreak > 0) {
-        // add buffer if last slot ends before break start
-        if (newSlots[newSlots.length - 1].end < data.breakStartTime) {
+      // generate slots after last break
+      let [lastBreakEndHour, lastBreakEndMinute] = [
+        dayStartHour,
+        dayStartMinute,
+      ]; // if there is no break, we generate slots from day start
+      if (numBreaks > 0) {
+        [lastBreakEndHour, lastBreakEndMinute] = getTimeNumsFromString(
+          data.breaks[numBreaks - 1].endTime
+        );
+      }
+
+      const afterBreakMinutes =
+        (dayEndHour - lastBreakEndHour) * 60 +
+        dayEndMinute -
+        lastBreakEndMinute;
+      const numSlotsAfterBreak = Math.floor(afterBreakMinutes / slotMinutes);
+
+      if (numSlotsAfterBreak > 0) {
+        for (let j = 0; j < numSlotsAfterBreak; j++) {
+          const [slotStartHour, slotStartMinute] = addMinutes(
+            lastBreakEndHour,
+            lastBreakEndMinute,
+            j * slotMinutes
+          );
+          const [slotEndHour, slotEndMinute] = addMinutes(
+            lastBreakEndHour,
+            lastBreakEndMinute,
+            (j + 1) * slotMinutes
+          );
+
+          const slotStart = getTimeStringFromNums(
+            slotStartHour,
+            slotStartMinute
+          );
+          const slotEnd = getTimeStringFromNums(slotEndHour, slotEndMinute);
+
           newSlots.push({
             id: uuidv4(),
-            title: `Buffer`,
+            title: "Work Slot",
             description: "",
-            start: newSlots[newSlots.length - 1].end,
-            end: data.breakStartTime,
+            start: slotStart,
+            end: slotEnd,
+            type: "slot",
+          });
+        }
+
+        // generate buffer slot if last slot ends before day end
+        if (newSlots[newSlots.length - 1].end < data.endTime) {
+          const lastSlot = newSlots[newSlots.length - 1];
+          newSlots.push({
+            id: uuidv4(),
+            title: "Buffer Slot",
+            description: "",
+            start: lastSlot.end,
+            end: data.endTime,
             type: "buffer",
           });
         }
       } else {
-        if (data.startTime < data.breakStartTime) {
-          newSlots.push({
-            id: uuidv4(),
-            title: `Buffer`,
-            description: "",
-            start: data.startTime,
-            end: data.breakStartTime,
-            type: "buffer",
-          });
-        }
-      }
-
-      // generate break
-      newSlots.push({
-        id: uuidv4(),
-        title: "Break",
-        description: "",
-        start: data.breakStartTime,
-        end: data.breakEndTime,
-        type: "break",
-      });
-
-      // generate slots after break
-      for (let i = 0; i < numSlotsAfterBreak; i++) {
-        const [slotStartHour, slotStartMinute] = addMinutes(
-          breakEndHour,
-          breakEndMinute,
-          i * slotMinutes
-        );
-        const [slotEndHour, slotEndMinute] = addMinutes(
-          breakEndHour,
-          breakEndMinute,
-          (i + 1) * slotMinutes
-        );
-
-        const slotStartTime = getTimeStringFromNums(
-          slotStartHour,
-          slotStartMinute
-        );
-        const slotEndTime = getTimeStringFromNums(slotEndHour, slotEndMinute);
-        newSlots.push({
-          id: uuidv4(),
-          title: `Work Slot`,
-          description: "",
-          start: slotStartTime,
-          end: slotEndTime,
-          type: "slot",
-        });
-      }
-
-      // generate buffer
-      if (numSlotsAfterBreak > 0) {
-        // add buffer if last slot ends before day end
         if (newSlots[newSlots.length - 1].end < data.endTime) {
           newSlots.push({
             id: uuidv4(),
-            title: `Buffer`,
+            title: "Buffer Slot",
             description: "",
             start: newSlots[newSlots.length - 1].end,
             end: data.endTime,
             type: "buffer",
           });
         }
-      } else {
-        if (data.breakEndTime < data.endTime) {
-          newSlots.push({
-            id: uuidv4(),
-            title: `Buffer`,
-            description: "",
-            start: data.breakEndTime,
-            end: data.endTime,
-            type: "buffer",
-          });
-        }
       }
 
-      return newSlots as slot[];
+      return newSlots;
     };
 
     const newSlots = generateNewSlots();
@@ -360,7 +483,6 @@ export default function AddSlots({
       const sortedSlots = cleanedSlots.sort((a, b) =>
         a.start < b.start ? -1 : 1
       );
-      console.log(sortedSlots);
 
       if (sortedSlots.length === 0) {
         setOpen(false);
@@ -480,41 +602,68 @@ export default function AddSlots({
               )}
             />
           </div>
-          <div className="flex gap-4 w-full">
-            <FormField
-              control={form.control}
-              name="breakStartTime"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Break Start Time</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="time"
-                      {...field}
-                      className="flex items-center justify-center"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="breakEndTime"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Break End Time</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="time"
-                      {...field}
-                      className="flex items-center justify-center"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="flex flex-col gap-4 w-full">
+            {breaksFields.map((_, index) => (
+              <div
+                className="flex flex-col gap-4 w-full items-center justify-center"
+                key={index}
+              >
+                <div className="flex w-full gap-4 items-center">
+                  <FormField
+                    control={form.control}
+                    name={`breaks.${index}.startTime`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Break {index + 1} Start Time</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            {...field}
+                            className="flex items-center justify-center"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`breaks.${index}.endTime`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Break {index + 1} End Time</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            {...field}
+                            className="flex items-center justify-center"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <X
+                    onClick={() => breaksRemove(index)}
+                    className="text-destructive"
+                  />
+                </div>
+                {form.formState.errors.breaks?.[index] && (
+                  <p className="text-destructive text-sm">
+                    {form.formState.errors.breaks[index].message}
+                  </p>
+                )}
+              </div>
+            ))}
+            {breaksFields.length < 3 && (
+              <Button
+                type="button"
+                onClick={() => breaksAppend({ startTime: "", endTime: "" })}
+                variant="ghost"
+              >
+                + Add Break
+              </Button>
+            )}
           </div>
           <div className="flex gap-4 w-full">
             <FormField
@@ -550,7 +699,9 @@ export default function AddSlots({
                   <FormControl>
                     <DatePicker
                       value={
-                        !form.getValues("isDefault") ? field.value : undefined
+                        !form.getValues("isDefault")
+                          ? (field.value as Date)
+                          : undefined
                       }
                       onChange={field.onChange}
                       disabled={watchIsDefault}
@@ -585,11 +736,6 @@ export default function AddSlots({
               </FormItem>
             )}
           />
-          {form.formState.errors.slotDateError && (
-            <p className="text-red-500">
-              {form.formState.errors.slotDateError.message}
-            </p>
-          )}
           <Button type="submit">Generate Slots</Button>
         </div>
       </form>
