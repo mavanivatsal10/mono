@@ -414,55 +414,61 @@ export default function EditEventPopover({
       }
     }
 
-    // if (
-    //   slotsToday.find((s) => s.type === "break") === undefined &&
-    //   (compareTime(updatedEndTime, "isBefore", breakToday.start) ||
-    //     compareTime(updatedStartTime, "isAfter", breakToday.end))
-    // ) {
-    //   slotsToday.push({
-    //     id: uuidv4(),
-    //     date: slotDate,
-    //     start: breakToday.start,
-    //     end: breakToday.end,
-    //     title: "Break",
-    //     description: "",
-    //     type: "break",
-    //   });
-    // }
-
     currentSlot.start = updatedStartTime;
     currentSlot.end = updatedEndTime;
 
-    slotsToday = slotsToday.filter(
-      (slot) =>
-        !isOverlaping(
-          { start: slot.start, end: slot.end },
-          { start: updatedStartTime, end: updatedEndTime }
-        )
-    );
+    slotsToday = slotsToday.filter((e) => e.id !== currentSlot.id);
     slotsToday.push(currentSlot);
 
-    const filteredSlots = slots.filter((s) => s.date !== slotDate);
-    slotsToday = filteredSlots.concat(slotsToday);
+    // add buffer if edited time is leaving time before/after neighboring slots
+    const sortedSlotsToday = slotsToday.sort((a, b) =>
+      compareTime(a.start, "isBefore", b.start) ? -1 : 1
+    );
 
-    const leaveSlot = slotsToday.find((s) => s.type === "leave");
-    const breakSlot = slotsToday.find((s) => s.type === "break");
-
-    const isLeaveBeforeBreak =
-      leaveSlot !== undefined &&
-      breakSlot !== undefined &&
-      compareTime(leaveSlot.end, "isBefore", breakSlot.start);
-    const isLeaveAfterBreak =
-      leaveSlot !== undefined &&
-      breakSlot !== undefined &&
-      compareTime(leaveSlot.start, "isAfter", breakSlot.end);
-    const isLeaveConsumeBreak =
-      leaveSlot !== undefined && breakSlot === undefined;
-
-    if (isLeaveBeforeBreak) {
+    let slotBefore, slotAfter;
+    for (let i = 0; i < sortedSlotsToday.length; i++) {
+      const slot = sortedSlotsToday[i];
+      if (slot.id === currentSlot.id) {
+        slotBefore = i > 0 ? sortedSlotsToday[i - 1] : null;
+        slotAfter =
+          i < sortedSlotsToday.length - 1 ? sortedSlotsToday[i + 1] : null;
+      }
     }
 
-    setSlots(slotsToday);
+    if (
+      slotBefore !== null &&
+      compareTime(slotBefore.end, "isBefore", currentSlot.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: slotBefore.end,
+        end: currentSlot.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    if (
+      slotAfter !== null &&
+      compareTime(currentSlot.end, "isBefore", slotAfter.start)
+    ) {
+      slotsToday.push({
+        id: uuidv4(),
+        date: slotDate,
+        start: currentSlot.end,
+        end: slotAfter.start,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      });
+    }
+
+    const filteredSlots = slots.filter((s) => s.date !== slotDate);
+    const updatedSlots = filteredSlots.concat(slotsToday);
+
+    setSlots(updatedSlots);
     removePopup();
   };
 
