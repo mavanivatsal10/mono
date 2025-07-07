@@ -98,10 +98,7 @@ export default function AddSlots({
       }
 
       data.breaks.forEach((breakItem, index) => {
-        if (
-          breakItem.start < data.start ||
-          breakItem.start > data.end
-        ) {
+        if (breakItem.start < data.start || breakItem.start > data.end) {
           ctx.addIssue({
             message:
               "Break start time must be between start time and end time.",
@@ -110,10 +107,7 @@ export default function AddSlots({
           });
         }
 
-        if (
-          breakItem.end < data.start ||
-          breakItem.end > data.end
-        ) {
+        if (breakItem.end < data.start || breakItem.end > data.end) {
           ctx.addIssue({
             message: "Break end time must be between start time and end time.",
             path: ["breaks", index, "end"],
@@ -234,9 +228,7 @@ export default function AddSlots({
        */
 
       // form values
-      const [dayStartHour, dayStartMinute] = getTimeNumsFromString(
-        data.start
-      );
+      const [dayStartHour, dayStartMinute] = getTimeNumsFromString(data.start);
       const [dayEndHour, dayEndMinute] = getTimeNumsFromString(data.end);
       const slotMinutes = Number(data.slotDuration);
       const numBreaks = data.breaks.length;
@@ -250,13 +242,14 @@ export default function AddSlots({
         type: "slot" | "buffer" | "break";
       }[] = [];
 
+      const sortedBreaks = data.breaks.sort((a, b) =>
+        a.start < b.start ? -1 : 1
+      );
+
       // loop through # (number of) breaks
       for (let i = 0; i < numBreaks; i++) {
         const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
-          data.breaks[i].start
-        );
-        const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
-          data.breaks[i].end
+          sortedBreaks[i].start
         );
 
         let beforeBreakMinutes = 0;
@@ -267,7 +260,7 @@ export default function AddSlots({
             dayStartMinute;
         } else {
           const [prevBreakEndHour, prevBreakEndMinute] = getTimeNumsFromString(
-            data.breaks[i - 1].end
+            sortedBreaks[i - 1].end
           );
           beforeBreakMinutes =
             (breakStartHour - prevBreakEndHour) * 60 +
@@ -295,7 +288,7 @@ export default function AddSlots({
               );
             } else {
               const [prevBreakEndHour, prevBreakEndMinute] =
-                getTimeNumsFromString(data.breaks[i - 1].end);
+                getTimeNumsFromString(sortedBreaks[i - 1].end);
               [slotStartHour, slotStartMinute] = addMinutes(
                 prevBreakEndHour,
                 prevBreakEndMinute,
@@ -325,38 +318,38 @@ export default function AddSlots({
           }
 
           // generate buffer slot if last slot ends before break start
-          if (newSlots[newSlots.length - 1].end < data.breaks[i].start) {
+          if (newSlots[newSlots.length - 1].end < sortedBreaks[i].start) {
             const lastSlot = newSlots[newSlots.length - 1];
             newSlots.push({
               id: uuidv4(),
               title: "Buffer Slot",
               description: "",
               start: lastSlot.end,
-              end: data.breaks[i].start,
+              end: sortedBreaks[i].start,
               type: "buffer",
             });
           }
         } else {
           if (i === 0) {
-            if (data.start < data.breaks[i].start) {
+            if (data.start < sortedBreaks[i].start) {
               newSlots.push({
                 id: uuidv4(),
                 title: "Buffer Slot",
                 description: "",
                 start: data.start,
-                end: data.breaks[i].start,
+                end: sortedBreaks[i].start,
                 type: "buffer",
               });
             }
           } else {
             const prevSlot = newSlots[newSlots.length - 1];
-            if (prevSlot.end < data.breaks[i].start) {
+            if (prevSlot.end < sortedBreaks[i].start) {
               newSlots.push({
                 id: uuidv4(),
                 title: "Buffer Slot",
                 description: "",
                 start: prevSlot.end,
-                end: data.breaks[i].start,
+                end: sortedBreaks[i].start,
                 type: "buffer",
               });
             }
@@ -368,8 +361,8 @@ export default function AddSlots({
           id: uuidv4(),
           title: "Break",
           description: "",
-          start: data.breaks[i].start,
-          end: data.breaks[i].end,
+          start: sortedBreaks[i].start,
+          end: sortedBreaks[i].end,
           type: "break",
         });
       }

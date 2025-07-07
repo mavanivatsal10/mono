@@ -13,6 +13,7 @@ import type {
 import { format } from "date-fns";
 import { isOverlaping } from "@/lib/utils";
 import EditEvent from "./EditEvent";
+import { toast } from "sonner";
 
 export default function Calendar() {
   const { slots, specificDates, editEvent, setEditEvent } = useTimetable();
@@ -208,6 +209,12 @@ export default function Calendar() {
 
   const handleEventClick = (arg: EventClickArg) => {
     arg.jsEvent.stopPropagation();
+
+    if (arg.event._def.extendedProps.type === "buffer") {
+      toast("Cannot edit buffer slots");
+      return;
+    }
+
     setEditEvent({
       showOverlay: true,
       eventData: arg.event,

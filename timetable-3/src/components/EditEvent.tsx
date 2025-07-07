@@ -20,7 +20,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { slot } from "@/types/types";
 import { format, parse, set } from "date-fns";
 import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function EditEvent() {
   const { editEvent, setEditEvent } = useTimetable();
@@ -55,8 +55,10 @@ function EditForm() {
     setEditEvent,
   } = useTimetable();
 
-  const slot = slots.find((s) => s.id === event?._def.extendedProps.slotId);
+  const [isConfirmClicked, setIsConfirmClicked] = useState(false);
 
+  // calculation of various variables
+  const slot = slots.find((s) => s.id === event?._def.extendedProps.slotId);
   let slotsToday: slot[];
   let dayStart, dayEnd;
   const defaultSlots = slots.filter((s) => s.date === "default");
@@ -97,6 +99,20 @@ function EditForm() {
   const sortedSlotsToday = slotsToday.sort((a, b) =>
     a.start < b.start ? -1 : 1
   );
+  const breaksToday = sortedSlotsToday.filter((s) => s.type === "break");
+  let longestBreak: slot, longestBreakMins: number;
+  if (breaksToday.length > 0) {
+    longestBreak = breaksToday.reduce((prev, curr) => {
+      const prevMins = calculateSlotMinutes(prev);
+      const currMins = calculateSlotMinutes(curr);
+      return prevMins > currMins ? prev : curr;
+    });
+    longestBreakMins = calculateSlotMinutes(longestBreak);
+  }
+  const leavesToday = sortedSlotsToday.filter((s) => s.type === "leave");
+  const defaultDate = format(event?.start as Date, "yyyy-MM-dd");
+  const defaultStart = format(new Date(event?.start as Date), "HH:mm");
+  const defaultEnd = format(event?.end as Date, "HH:mm");
 
   const formSchema = z
     .object({
@@ -158,7 +174,6 @@ function EditForm() {
           });
         }
 
-        const breaksToday = sortedSlotsToday.filter((s) => s.type === "break");
         if (
           breaksToday?.some(
             (otherBreak) =>
@@ -187,12 +202,6 @@ function EditForm() {
             path: ["breakError"],
           });
         } else if (breakMins > 15) {
-          const longestBreak = breaksToday.reduce((prev, curr) => {
-            const prevMins = calculateSlotMinutes(prev);
-            const currMins = calculateSlotMinutes(curr);
-            return prevMins > currMins ? prev : curr;
-          });
-          const longestBreakMins = calculateSlotMinutes(longestBreak);
           if (longestBreak !== slot && longestBreakMins > 15) {
             ctx.addIssue({
               message: "Only one long break (> 15 minutes) is allowed.",
@@ -200,6 +209,25 @@ function EditForm() {
               code: z.ZodIssueCode.custom,
             });
           }
+        }
+      }
+
+      if (slot?.type === "leave") {
+        if (
+          leavesToday?.some(
+            (otherLeave) =>
+              otherLeave.id !== slot?.id &&
+              isOverlaping(
+                { start: otherLeave.start, end: otherLeave.end },
+                { start: data.start, end: data.end }
+              )
+          )
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "New timing is overlapping with another leave.",
+            path: ["breakError"],
+          });
         }
       }
     });
@@ -211,7 +239,7 @@ function EditForm() {
       description: slot?.description || "",
       start: slot?.start || "",
       end: slot?.end || "",
-      date: event?._instance?.range.start || new Date(),
+      date: event?.start || new Date(),
     },
   });
 
@@ -254,13 +282,94 @@ function EditForm() {
   };
 
   const deleteSlot = () => {
-    setSlots((prev) => prev.filter((s) => s.id !== slot?.id));
+    /**
+     * if default slot, add buffer of that duration
+     * else, remove slot
+     */
+    if (slot?.date === "default") {
+      setSlots((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          title: "Buffer",
+          description: "",
+          start: defaultStart,
+          end: defaultEnd,
+          date: defaultDate,
+          type: "buffer",
+        },
+      ]);
+    } else {
+      setSlots((prev) => prev.filter((s) => s.id !== slot?.id));
+    }
     setEditEvent({ showOverlay: false, eventData: null });
   };
 
+  // add/remove errors once confirm button is clicked
+  const watchStart = form.watch("start");
+  const watchEnd = form.watch("end");
+  const dependency = watchStart + watchEnd;
   useEffect(() => {
-    
-  })
+    if (!isConfirmClicked) return;
+
+    if (slot?.type === "break") {
+      if (
+        breaksToday?.some(
+          (otherBreak) =>
+            otherBreak.id !== slot?.id &&
+            isOverlaping(
+              { start: otherBreak.start, end: otherBreak.end },
+              { start: watchStart, end: watchEnd }
+            )
+        )
+      ) {
+        form.setError("breakError", {
+          message: "New timing is overlapping with another break.",
+          type: "manual",
+        });
+      } else {
+        form.clearErrors("breakError");
+      }
+
+      const breakMins = calculateSlotMinutes({
+        start: watchStart,
+        end: watchEnd,
+      });
+      if (breakMins > 45) {
+        form.setError("breakError", {
+          message: "Breaks cannot be longer than 45 minutes.",
+          type: "manual",
+        });
+      } else if (breakMins > 15) {
+        if (longestBreak !== slot && longestBreakMins > 15) {
+          form.setError("breakError", {
+            message: "Only one long break (> 15 minutes) is allowed.",
+            type: "manual",
+          });
+        }
+      } else {
+        form.clearErrors("breakError");
+      }
+    } else if (slot?.type === "leave") {
+      if (
+        leavesToday?.some(
+          (otherLeave) =>
+            otherLeave.id !== slot?.id &&
+            isOverlaping(
+              { start: otherLeave.start, end: otherLeave.end },
+              { start: watchStart, end: watchEnd }
+            )
+        )
+      ) {
+        form.setError("breakError", {
+          message: "New timing is overlapping with another leave.",
+          type: "manual",
+        });
+      } else {
+        form.clearErrors("breakError");
+      }
+    }
+  }, [dependency]);
 
   return (
     <Form {...form}>
@@ -371,7 +480,11 @@ function EditForm() {
             >
               Delete Event
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button
+              type="submit"
+              className="flex-1"
+              onClick={() => setIsConfirmClicked(true)}
+            >
               Confirm Edit
             </Button>
           </div>
