@@ -33,8 +33,8 @@ export default function AddLeave({
       date: z.date().nullable(),
       holidayType: z.enum(["full", "half", "short"]),
       halfSession: z.enum(["morning", "afternoon"]).optional(),
-      startTime: timeSchema,
-      endTime: timeSchema,
+      start: timeSchema,
+      end: timeSchema,
     })
     .refine(
       (data) => {
@@ -60,34 +60,34 @@ export default function AddLeave({
     .refine(
       (data) => {
         if (data.holidayType === "short") {
-          return data.startTime !== undefined;
+          return data.start !== undefined;
         }
         return true;
       },
       {
         message: "Please enter start time",
-        path: ["startTime"],
+        path: ["start"],
       }
     )
     .refine(
       (data) => {
         if (data.holidayType === "short") {
-          return data.endTime !== undefined;
+          return data.end !== undefined;
         }
         return true;
       },
       {
         message: "Please enter end time",
-        path: ["endTime"],
+        path: ["end"],
       }
     )
     .refine(
       (data) => {
-        return data.startTime < data.endTime || data.startTime === data.endTime;
+        return data.start < data.end || data.start === data.end;
       },
       {
         message: "End time must be on or after start time.",
-        path: ["endTime"],
+        path: ["end"],
       }
     );
 
@@ -97,8 +97,8 @@ export default function AddLeave({
       date: new Date(),
       holidayType: "full",
       halfSession: "morning",
-      startTime: `${String(new Date().getHours()).padStart(2, "0")}:00`,
-      endTime: `${String(
+      start: `${String(new Date().getHours()).padStart(2, "0")}:00`,
+      end: `${String(
         new Date().getHours() === 23 ? 0 : new Date().getHours() + 1
       ).padStart(2, "0")}:00`,
     },
@@ -113,8 +113,8 @@ export default function AddLeave({
      */
 
     const leaveDate = format(data.date as Date, "yyyy-MM-dd");
-    const leaveStart = data.startTime;
-    const leaveEnd = data.endTime;
+    const leaveStart = data.start;
+    const leaveEnd = data.end;
 
     // check if intersecting with any other leave
     const leavesToday = slots.filter(
@@ -210,22 +210,22 @@ export default function AddLeave({
   const watchHalfSession = form.watch("halfSession");
   useEffect(() => {
     if (watchHolidayType === "full") {
-      form.setValue("startTime", "09:00");
-      form.setValue("endTime", "18:30");
+      form.setValue("start", "09:00");
+      form.setValue("end", "18:30");
     } else if (watchHolidayType === "half") {
       if (watchHalfSession === "morning") {
-        form.setValue("startTime", "09:00");
-        form.setValue("endTime", "13:00");
+        form.setValue("start", "09:00");
+        form.setValue("end", "13:00");
       } else {
-        form.setValue("startTime", "13:45");
-        form.setValue("endTime", "18:30");
+        form.setValue("start", "13:45");
+        form.setValue("end", "18:30");
       }
     }
   }, [watchHolidayType, watchHalfSession]);
 
   // remove leave overlapping error if time is acceptable
-  const watchStartTime = form.watch("startTime");
-  const watchEndTime = form.watch("endTime");
+  const watchstart = form.watch("start");
+  const watchend = form.watch("end");
   const watchDate = form.watch("date");
   useEffect(() => {
     const leaveDate = format(watchDate as Date, "yyyy-MM-dd");
@@ -238,7 +238,7 @@ export default function AddLeave({
       leavesToday.some((s) =>
         isOverlaping(
           { start: s.start, end: s.end },
-          { start: watchStartTime, end: watchEndTime }
+          { start: watchstart, end: watchend }
         )
       )
     ) {
@@ -246,7 +246,7 @@ export default function AddLeave({
     }
 
     form.clearErrors("root");
-  }, [watchStartTime, watchEndTime, watchDate]);
+  }, [watchstart, watchend, watchDate]);
 
   return (
     <Form {...form}>
@@ -343,14 +343,14 @@ export default function AddLeave({
                         <div className="flex gap-4 ml-8">
                           <FormField
                             control={form.control}
-                            name="startTime"
-                            render={({ field: startTimeField }) => (
+                            name="start"
+                            render={({ field: startField }) => (
                               <FormItem className="flex-1">
                                 <FormLabel>Start Time</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="time"
-                                    {...startTimeField}
+                                    {...startField}
                                     className="flex items-center justify-center"
                                   />
                                 </FormControl>
@@ -360,14 +360,14 @@ export default function AddLeave({
                           />
                           <FormField
                             control={form.control}
-                            name="endTime"
-                            render={({ field: endTimeField }) => (
+                            name="end"
+                            render={({ field: endField }) => (
                               <FormItem className="flex-1">
                                 <FormLabel>End Time</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="time"
-                                    {...endTimeField}
+                                    {...endField}
                                     className="flex items-center justify-center"
                                   />
                                 </FormControl>

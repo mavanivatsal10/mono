@@ -30,8 +30,8 @@ export const addMinutes = (hour: number, minute: number, minutes: number) => {
 };
 
 export const calculateSlotMinutes = (slot) => {
-  if (!slot || !slot.startTime || !slot.endTime) return 0;
-  const startNums = getTimeNumsFromString(slot.startTime);
-  const endNums = getTimeNumsFromString(slot.endTime);
+  if (!slot || !slot.start || !slot.end) return 0;
+  const startNums = getTimeNumsFromString(slot.start);
+  const endNums = getTimeNumsFromString(slot.end);
   return (endNums[0] - startNums[0]) * 60 + (endNums[1] - startNums[1]);
 };

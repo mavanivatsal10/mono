@@ -43,12 +43,12 @@ export default function AddSlots({
       description: z.string(),
       date: z.union([z.date().nullable(), z.literal("default")]),
       isDefault: z.boolean(),
-      startTime: timeSchema,
-      endTime: timeSchema,
+      start: timeSchema,
+      end: timeSchema,
       breaks: z.array(
         z.object({
-          startTime: timeSchema,
-          endTime: timeSchema,
+          start: timeSchema,
+          end: timeSchema,
           overlap: z.boolean().optional(),
           shortBreak: z.boolean().optional(),
           longBreak: z.boolean().optional(),
@@ -57,10 +57,10 @@ export default function AddSlots({
       slotDuration: z.string(),
     })
     .superRefine((data, ctx) => {
-      if (data.startTime > data.endTime || data.startTime === data.endTime) {
+      if (data.start > data.end || data.start === data.end) {
         ctx.addIssue({
           message: "End time must be after start time.",
-          path: ["endTime"],
+          path: ["end"],
           code: z.ZodIssueCode.custom,
         });
       }
@@ -99,24 +99,24 @@ export default function AddSlots({
 
       data.breaks.forEach((breakItem, index) => {
         if (
-          breakItem.startTime < data.startTime ||
-          breakItem.startTime > data.endTime
+          breakItem.start < data.start ||
+          breakItem.start > data.end
         ) {
           ctx.addIssue({
             message:
               "Break start time must be between start time and end time.",
-            path: ["breaks", index, "startTime"],
+            path: ["breaks", index, "start"],
             code: z.ZodIssueCode.custom,
           });
         }
 
         if (
-          breakItem.endTime < data.startTime ||
-          breakItem.endTime > data.endTime
+          breakItem.end < data.start ||
+          breakItem.end > data.end
         ) {
           ctx.addIssue({
             message: "Break end time must be between start time and end time.",
-            path: ["breaks", index, "endTime"],
+            path: ["breaks", index, "end"],
             code: z.ZodIssueCode.custom,
           });
         }
@@ -126,8 +126,8 @@ export default function AddSlots({
             (otherBreak, otherIndex) =>
               otherIndex !== index &&
               isOverlaping(
-                { start: breakItem.startTime, end: breakItem.endTime },
-                { start: otherBreak.startTime, end: otherBreak.endTime }
+                { start: breakItem.start, end: breakItem.end },
+                { start: otherBreak.start, end: otherBreak.end }
               )
           )
         ) {
@@ -139,12 +139,12 @@ export default function AddSlots({
         }
 
         if (
-          breakItem.endTime < breakItem.startTime ||
-          breakItem.endTime === breakItem.startTime
+          breakItem.end < breakItem.start ||
+          breakItem.end === breakItem.start
         ) {
           ctx.addIssue({
             message: "Break end time must be after break start time.",
-            path: ["breaks", index, "endTime"],
+            path: ["breaks", index, "end"],
             code: z.ZodIssueCode.custom,
           });
         }
@@ -182,9 +182,9 @@ export default function AddSlots({
       description: "",
       date: new Date(),
       isDefault: true,
-      startTime: "09:00",
-      endTime: "18:30",
-      breaks: [{ startTime: "13:00", endTime: "13:45" }],
+      start: "09:00",
+      end: "18:30",
+      breaks: [{ start: "13:00", end: "13:45" }],
       slotDuration: "60",
     },
   });
@@ -235,9 +235,9 @@ export default function AddSlots({
 
       // form values
       const [dayStartHour, dayStartMinute] = getTimeNumsFromString(
-        data.startTime
+        data.start
       );
-      const [dayEndHour, dayEndMinute] = getTimeNumsFromString(data.endTime);
+      const [dayEndHour, dayEndMinute] = getTimeNumsFromString(data.end);
       const slotMinutes = Number(data.slotDuration);
       const numBreaks = data.breaks.length;
 
@@ -253,10 +253,10 @@ export default function AddSlots({
       // loop through # (number of) breaks
       for (let i = 0; i < numBreaks; i++) {
         const [breakStartHour, breakStartMinute] = getTimeNumsFromString(
-          data.breaks[i].startTime
+          data.breaks[i].start
         );
         const [breakEndHour, breakEndMinute] = getTimeNumsFromString(
-          data.breaks[i].endTime
+          data.breaks[i].end
         );
 
         let beforeBreakMinutes = 0;
@@ -267,7 +267,7 @@ export default function AddSlots({
             dayStartMinute;
         } else {
           const [prevBreakEndHour, prevBreakEndMinute] = getTimeNumsFromString(
-            data.breaks[i - 1].endTime
+            data.breaks[i - 1].end
           );
           beforeBreakMinutes =
             (breakStartHour - prevBreakEndHour) * 60 +
@@ -295,7 +295,7 @@ export default function AddSlots({
               );
             } else {
               const [prevBreakEndHour, prevBreakEndMinute] =
-                getTimeNumsFromString(data.breaks[i - 1].endTime);
+                getTimeNumsFromString(data.breaks[i - 1].end);
               [slotStartHour, slotStartMinute] = addMinutes(
                 prevBreakEndHour,
                 prevBreakEndMinute,
@@ -325,38 +325,38 @@ export default function AddSlots({
           }
 
           // generate buffer slot if last slot ends before break start
-          if (newSlots[newSlots.length - 1].end < data.breaks[i].startTime) {
+          if (newSlots[newSlots.length - 1].end < data.breaks[i].start) {
             const lastSlot = newSlots[newSlots.length - 1];
             newSlots.push({
               id: uuidv4(),
               title: "Buffer Slot",
               description: "",
               start: lastSlot.end,
-              end: data.breaks[i].startTime,
+              end: data.breaks[i].start,
               type: "buffer",
             });
           }
         } else {
           if (i === 0) {
-            if (data.startTime < data.breaks[i].startTime) {
+            if (data.start < data.breaks[i].start) {
               newSlots.push({
                 id: uuidv4(),
                 title: "Buffer Slot",
                 description: "",
-                start: data.startTime,
-                end: data.breaks[i].startTime,
+                start: data.start,
+                end: data.breaks[i].start,
                 type: "buffer",
               });
             }
           } else {
             const prevSlot = newSlots[newSlots.length - 1];
-            if (prevSlot.end < data.breaks[i].startTime) {
+            if (prevSlot.end < data.breaks[i].start) {
               newSlots.push({
                 id: uuidv4(),
                 title: "Buffer Slot",
                 description: "",
                 start: prevSlot.end,
-                end: data.breaks[i].startTime,
+                end: data.breaks[i].start,
                 type: "buffer",
               });
             }
@@ -368,8 +368,8 @@ export default function AddSlots({
           id: uuidv4(),
           title: "Break",
           description: "",
-          start: data.breaks[i].startTime,
-          end: data.breaks[i].endTime,
+          start: data.breaks[i].start,
+          end: data.breaks[i].end,
           type: "break",
         });
       }
@@ -381,7 +381,7 @@ export default function AddSlots({
       ]; // if there is no break, we generate slots from day start
       if (numBreaks > 0) {
         [lastBreakEndHour, lastBreakEndMinute] = getTimeNumsFromString(
-          data.breaks[numBreaks - 1].endTime
+          data.breaks[numBreaks - 1].end
         );
       }
 
@@ -421,25 +421,25 @@ export default function AddSlots({
         }
 
         // generate buffer slot if last slot ends before day end
-        if (newSlots[newSlots.length - 1].end < data.endTime) {
+        if (newSlots[newSlots.length - 1].end < data.end) {
           const lastSlot = newSlots[newSlots.length - 1];
           newSlots.push({
             id: uuidv4(),
             title: "Buffer Slot",
             description: "",
             start: lastSlot.end,
-            end: data.endTime,
+            end: data.end,
             type: "buffer",
           });
         }
       } else {
-        if (newSlots[newSlots.length - 1].end < data.endTime) {
+        if (newSlots[newSlots.length - 1].end < data.end) {
           newSlots.push({
             id: uuidv4(),
             title: "Buffer Slot",
             description: "",
             start: newSlots[newSlots.length - 1].end,
-            end: data.endTime,
+            end: data.end,
             type: "buffer",
           });
         }
@@ -490,8 +490,8 @@ export default function AddSlots({
         return;
       }
 
-      const dayStart = data.startTime;
-      const dayEnd = data.endTime;
+      const dayStart = data.start;
+      const dayEnd = data.end;
 
       for (let i = 0; i < sortedSlots.length; i++) {
         const slot = sortedSlots[i];
@@ -563,20 +563,20 @@ export default function AddSlots({
   // remove errors if conditions are met else add them
   const watchBreaks = form.watch("breaks");
   const dependency = watchBreaks
-    .map((b, i) => `break-${i + 1}-${b.startTime}-${b.endTime}`)
-    .join("|"); // useEffect should re-render whenever there is change in any of the startTime or endTime
+    .map((b, i) => `break-${i + 1}-${b.start}-${b.end}`)
+    .join("|"); // useEffect should re-render whenever there is change in any of the start or end
   useEffect(() => {
-    const startTimes = [];
-    const endTimes = [];
+    const starts = [];
+    const ends = [];
     for (let i = 0; i < watchBreaks.length; i++) {
-      startTimes.push(watchBreaks[i].startTime);
-      endTimes.push(watchBreaks[i].endTime);
+      starts.push(watchBreaks[i].start);
+      ends.push(watchBreaks[i].end);
 
       // remove "Breaks cannot be longer than 45 minutes."
       if (
         calculateSlotMinutes({
-          startTime: startTimes[i],
-          endTime: endTimes[i],
+          start: starts[i],
+          end: ends[i],
         }) <= 45
       ) {
         form.clearErrors(`breaks.${i}.longBreak`);
@@ -597,8 +597,8 @@ export default function AddSlots({
       if (longestBreakMins > 15) {
         for (let j = 0; j < watchBreaks.length; j++) {
           const currentBreakMins = calculateSlotMinutes({
-            startTime: startTimes[j],
-            endTime: endTimes[j],
+            start: starts[j],
+            end: ends[j],
           });
           if (longestBreak !== watchBreaks[j] && currentBreakMins <= 15) {
             form.clearErrors(`breaks.${j}.shortBreak`);
@@ -621,8 +621,8 @@ export default function AddSlots({
           (otherBreak, otherIndex) =>
             otherIndex !== i &&
             isOverlaping(
-              { start: watchBreaks[i].startTime, end: watchBreaks[i].endTime },
-              { start: otherBreak.startTime, end: otherBreak.endTime }
+              { start: watchBreaks[i].start, end: watchBreaks[i].end },
+              { start: otherBreak.start, end: otherBreak.end }
             )
         )
       ) {
@@ -646,7 +646,7 @@ export default function AddSlots({
           <div className="flex w-full gap-4">
             <FormField
               control={form.control}
-              name="startTime"
+              name="start"
               render={({ field }) => (
                 <FormItem className="flex-1">
                   <FormLabel>Start Time</FormLabel>
@@ -663,7 +663,7 @@ export default function AddSlots({
             />
             <FormField
               control={form.control}
-              name="endTime"
+              name="end"
               render={({ field }) => (
                 <FormItem className="flex-1">
                   <FormLabel>End Time</FormLabel>
@@ -688,7 +688,7 @@ export default function AddSlots({
                 <div className="flex w-full gap-4 items-center">
                   <FormField
                     control={form.control}
-                    name={`breaks.${index}.startTime`}
+                    name={`breaks.${index}.start`}
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>Break {index + 1} Start Time</FormLabel>
@@ -705,7 +705,7 @@ export default function AddSlots({
                   />
                   <FormField
                     control={form.control}
-                    name={`breaks.${index}.endTime`}
+                    name={`breaks.${index}.end`}
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>Break {index + 1} End Time</FormLabel>
@@ -745,7 +745,7 @@ export default function AddSlots({
             {breaksFields.length < 3 && (
               <Button
                 type="button"
-                onClick={() => breaksAppend({ startTime: "", endTime: "" })}
+                onClick={() => breaksAppend({ start: "", end: "" })}
                 variant="ghost"
               >
                 + Add Break
