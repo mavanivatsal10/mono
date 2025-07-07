@@ -27,6 +27,7 @@ import {
 import { format } from "date-fns";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { timeSchema } from "@/schemas/schemas";
 
 export default function AddSlots({
   setOpen,
@@ -35,11 +36,6 @@ export default function AddSlots({
 }) {
   const { slots, setSlots, setSpecificDates } = useTimetable();
   const [isSubmitClicked, setIsSubmitClicked] = useState(false); // flag to show/remove errors
-
-  const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-  const timeSchema = z
-    .string()
-    .regex(timeRegex, { message: "Please enter a valid time" });
 
   const formSchema = z
     .object({

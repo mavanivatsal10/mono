@@ -17,8 +17,9 @@ import { isOverlaping } from "@/lib/utils";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect } from "react";
-import type { slot } from "@/Types/types";
 import { useTimetable } from "@/hooks/useTimetable";
+import type { slot } from "@/types/types";
+import { timeSchema } from "@/schemas/schemas";
 
 export default function AddLeave({
   setOpen,
@@ -26,10 +27,6 @@ export default function AddLeave({
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { slots, setSlots, specificDates } = useTimetable();
-  const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-  const timeSchema = z
-    .string()
-    .regex(timeRegex, { message: "Please enter a valid time" });
 
   const formSchema = z
     .object({
@@ -109,14 +106,13 @@ export default function AddLeave({
 
   function addLeave(data: z.infer<typeof formSchema>) {
     /**
+     * find all the today's slots that intersect with the leave timings and remove them
+     * push the leave slot
      * if user has specific schedule today:
-     *  - find all the today's slots that intersect with the leave timings and remove them
-     *  - push the leave slot
      *  - go through the day and add buffer if edited time is leaving time before/after neighboring slots
-     * else slots.push(leave)
      */
 
-    const leaveDate = format(data.date, "yyyy-MM-dd");
+    const leaveDate = format(data.date as Date, "yyyy-MM-dd");
     const leaveStart = data.startTime;
     const leaveEnd = data.endTime;
 
@@ -140,26 +136,42 @@ export default function AddLeave({
       return;
     }
 
-    if (specificDates.has(leaveDate)) {
-      const slotsToday = slots.filter((s) => s.date === leaveDate);
-      const cleanedSlots = slotsToday.filter(
-        (s) =>
-          !isOverlaping(
-            { start: s.start, end: s.end },
-            { start: leaveStart, end: leaveEnd }
-          )
-      );
-      const id = uuidv4();
-      cleanedSlots.push({
-        id,
-        date: leaveDate,
-        start: leaveStart,
-        end: leaveEnd,
-        title: "Leave",
-        description: "",
-        type: "leave",
-      });
+    const slotsToday = slots.filter((s) => s.date === leaveDate);
+    const cleanedSlots = slotsToday.filter(
+      (s) =>
+        !isOverlaping(
+          { start: s.start, end: s.end },
+          { start: leaveStart, end: leaveEnd }
+        )
+    );
+    const id = uuidv4();
+    cleanedSlots.push({
+      id,
+      date: leaveDate,
+      start: leaveStart,
+      end: leaveEnd,
+      title: "Leave",
+      description: "",
+      type: "leave",
+    });
 
+    const remainingSlots = slots.filter((s) => s.date !== leaveDate);
+    setSlots([...remainingSlots, ...cleanedSlots]);
+
+    // add buffers if specific schedule today
+    const generateBufferSlot = (start: string, end: string) => {
+      return {
+        id: uuidv4(),
+        date: leaveDate,
+        start,
+        end,
+        title: "Buffer",
+        description: "",
+        type: "buffer",
+      } as slot;
+    };
+
+    if (specificDates.has(leaveDate)) {
       const sortedSlots = cleanedSlots.sort((a, b) =>
         a.start < b.start ? -1 : 1
       );
@@ -169,48 +181,26 @@ export default function AddLeave({
       if (i > 0) {
         const prevSlot = sortedSlots[i - 1];
         if (prevSlot.end < leaveStart) {
-          sortedSlots.push({
-            id: uuidv4(),
-            date: leaveDate,
-            start: prevSlot.end,
-            end: leaveStart,
-            title: "Buffer",
-            description: "",
-            type: "buffer",
-          });
+          if (prevSlot.type === "buffer") {
+            prevSlot.end = leaveStart;
+          } else {
+            sortedSlots.push(generateBufferSlot(prevSlot.end, leaveStart));
+          }
         }
       }
 
       if (i < sortedSlots.length - 1) {
         const nextSlot = sortedSlots[i + 1];
         if (leaveEnd < nextSlot.start) {
-          sortedSlots.push({
-            id: uuidv4(),
-            date: leaveDate,
-            start: leaveEnd,
-            end: nextSlot.start,
-            title: "Buffer",
-            description: "",
-            type: "buffer",
-          });
+          if (nextSlot.type === "buffer") {
+            nextSlot.start = leaveEnd;
+          } else {
+            sortedSlots.push(generateBufferSlot(leaveEnd, nextSlot.start));
+          }
         }
       }
 
-      const remainingSlots = slots.filter((s) => s.date !== leaveDate);
       setSlots([...remainingSlots, ...sortedSlots]);
-    } else {
-      setSlots((prev) => [
-        ...prev,
-        {
-          id: uuidv4(),
-          date: leaveDate,
-          start: leaveStart,
-          end: leaveEnd,
-          title: "Leave",
-          description: "",
-          type: "leave",
-        },
-      ]);
     }
 
     setOpen(false);

@@ -12,9 +12,10 @@ import type {
 } from "@fullcalendar/core/index.js";
 import { format } from "date-fns";
 import { isOverlaping } from "@/lib/utils";
+import EditEvent from "./EditEvent";
 
 export default function Calendar() {
-  const { slots, specificDates } = useTimetable();
+  const { slots, specificDates, editEvent, setEditEvent } = useTimetable();
 
   const getSlotColor = (type: string) => {
     if (type === "slot") return "#118ab2";
@@ -103,91 +104,79 @@ export default function Calendar() {
         if (slots.length === 0) {
           continue;
         }
-      }
 
-      // add buffer slots
-      const sortedDefaultSlots = slots
-        .filter((s) => s.date === "default")
-        .sort((a, b) => (a.start < b.start ? -1 : 1));
+        // add buffer slots
+        const generateBufferEvent = (start: string, end: string) => {
+          return {
+            id: uuidv4(),
+            title: "Buffer",
+            start: `${dateStr}T${start}:00`,
+            end: `${dateStr}T${end}:00`,
+            extendedProps: {
+              description: "",
+              type: "buffer",
+            },
+            color: getSlotColor("buffer"),
+          };
+        };
 
-      if (sortedDefaultSlots.length === 0) {
-        continue;
-      }
+        const sortedDefaultSlots = slots
+          .filter((s) => s.date === "default")
+          .sort((a, b) => (a.start < b.start ? -1 : 1));
 
-      const dayStart = sortedDefaultSlots[0].start;
-      const dayEnd = sortedDefaultSlots[sortedDefaultSlots.length - 1].end;
-      const allEventsToday = generated.filter(
-        (e) => format(e.start, "yyyy-MM-dd") === dateStr
-      );
-      const sortedAllEventsToday = allEventsToday.sort((a, b) => {
-        return a.start < b.start ? -1 : 1;
-      });
-
-      for (let i = 0; i < sortedAllEventsToday.length; i++) {
-        const event = sortedAllEventsToday[i];
-        const eventStart = format(event.start, "HH:mm");
-        const eventEnd = format(event.end, "HH:mm");
-        const nextEvent = sortedAllEventsToday[i + 1];
-        if (nextEvent === undefined) {
+        if (sortedDefaultSlots.length === 0) {
           continue;
         }
-        const nextEventStart = format(nextEvent.start, "HH:mm");
 
-        if (i === 0) {
-          if (eventStart > dayStart && !specificDates.has(dateStr)) {
-            generated.push({
-              id: uuidv4(),
-              title: "Buffer",
-              start: `${dateStr}T${dayStart}:00`,
-              end: `${dateStr}T${eventStart}:00`,
-              extendedProps: {
-                description: "",
-                type: "buffer",
-              },
-              color: getSlotColor("buffer"),
-            });
+        const dayStart = sortedDefaultSlots[0].start;
+        const dayEnd = sortedDefaultSlots[sortedDefaultSlots.length - 1].end;
+        const allEventsToday = generated.filter(
+          (e) => format(e.start as Date, "yyyy-MM-dd") === dateStr
+        );
+        const sortedAllEventsToday = allEventsToday.sort((a, b) => {
+          const astart = a.start as Date;
+          const bstart = b.start as Date;
+          return astart < bstart ? -1 : 1;
+        });
+
+        for (let i = 0; i < sortedAllEventsToday.length; i++) {
+          const event = sortedAllEventsToday[i];
+          const eventStart = format(event.start as Date, "HH:mm");
+          const eventEnd = format(event.end as Date, "HH:mm");
+          const nextEvent = sortedAllEventsToday[i + 1];
+          if (nextEvent === undefined) {
+            continue;
           }
-          if (eventEnd < nextEventStart) {
-            generated.push({
-              id: uuidv4(),
-              title: "Buffer",
-              start: `${dateStr}T${eventEnd}:00`,
-              end: `${dateStr}T${nextEventStart}:00`,
-              extendedProps: {
-                description: "",
-                type: "buffer",
-              },
-              color: getSlotColor("buffer"),
-            });
+          const nextEventStart = format(nextEvent.start as Date, "HH:mm");
+
+          if (i === 0) {
+            if (eventStart > dayStart && !specificDates.has(dateStr)) {
+              generated.push(generateBufferEvent(dayStart, eventStart));
+            }
+            if (eventEnd < nextEventStart) {
+              if (nextEvent.extendedProps?.type === "buffer") {
+                nextEvent.start = `${dateStr}T${eventEnd}:00`;
+              } else if (event.extendedProps?.type === "buffer") {
+                event.end = `${dateStr}T${nextEventStart}:00`;
+              } else {
+                generated.push(generateBufferEvent(eventEnd, nextEventStart));
+              }
+            }
+          } else if (
+            i === sortedAllEventsToday.length - 1 &&
+            eventEnd < dayEnd &&
+            !specificDates.has(dateStr)
+          ) {
+            generated.push(generateBufferEvent(eventEnd, dayEnd));
+          } else if (eventEnd < nextEventStart) {
+            if (nextEvent.extendedProps?.type === "buffer") {
+              nextEvent.start = `${dateStr}T${eventEnd}:00`;
+            } else if (event.extendedProps?.type === "buffer") {
+              event.end = `${dateStr}T${nextEventStart}:00`;
+            } else {
+              generated.push(generateBufferEvent(eventEnd, nextEventStart));
+            }
           }
-        } else if (
-          i === sortedAllEventsToday.length - 1 &&
-          eventEnd < dayEnd &&
-          !specificDates.has(dateStr)
-        ) {
-          generated.push({
-            id: uuidv4(),
-            title: "Buffer",
-            start: `${dateStr}T${eventEnd}:00`,
-            end: `${dateStr}T${dayEnd}:00`,
-            extendedProps: {
-              description: "",
-              type: "buffer",
-            },
-            color: getSlotColor("buffer"),
-          });
-        } else if (eventEnd < nextEventStart) {
-          generated.push({
-            id: uuidv4(),
-            title: "Buffer",
-            start: `${dateStr}T${eventEnd}:00`,
-            end: `${dateStr}T${nextEventStart}:00`,
-            extendedProps: {
-              description: "",
-              type: "buffer",
-            },
-            color: getSlotColor("buffer"),
-          });
         }
       }
     }
@@ -219,6 +208,10 @@ export default function Calendar() {
 
   const handleEventClick = (arg: EventClickArg) => {
     arg.jsEvent.stopPropagation();
+    setEditEvent({
+      showOverlay: true,
+      eventData: arg.event,
+    });
   };
 
   // Re-fetch events when slots change
@@ -262,6 +255,7 @@ export default function Calendar() {
           // slotMaxTime="20:00:00"
         />
       </div>
+      {editEvent.showOverlay && <EditEvent />}
     </div>
   );
 }
