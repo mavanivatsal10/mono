@@ -62,24 +62,42 @@ export default function Calendar() {
         generated.push(...events);
       } else {
         const slotsToday = slots.filter((s) => s.date === dateStr);
-        const eventsToday = slotsToday.map((s) => ({
-          id: uuidv4(),
-          title: s.title,
-          start: `${dateStr}T${s.start}:00`,
-          end: `${dateStr}T${s.end}:00`,
-          extendedProps: {
-            description: s.description,
-            type: s.type,
-            slotId: s.id,
-          },
-          color: getSlotColor(s.type),
-        }));
+        const noEventsToday = slotsToday.filter((s) => s.type === "no-events");
+        const fliteredSlotsToday = slotsToday.filter(
+          (s) =>
+            !noEventsToday.some(
+              (other) =>
+                s.id !== other.id &&
+                isOverlaping(
+                  { start: s.start, end: s.end },
+                  { start: other.start, end: other.end }
+                )
+            )
+        );
+        const eventsToday = fliteredSlotsToday.map((s) => {
+          const temp = {
+            id: uuidv4(),
+            title: s.title,
+            start: `${dateStr}T${s.start}:00`,
+            end: `${dateStr}T${s.end}:00`,
+            extendedProps: {
+              description: s.description,
+              type: s.type,
+              slotId: s.id,
+            },
+            color: getSlotColor(s.type),
+          };
+          if (s.type === "no-events") {
+            temp.display = "none";
+          }
+          return temp;
+        });
         generated.push(...eventsToday);
         const defaultSlots = slots.filter((s) => s.date === "default");
 
         for (const dslot of defaultSlots) {
           if (
-            !slotsToday.some((s) =>
+            !fliteredSlotsToday.some((s) =>
               isOverlaping(
                 { start: s.start, end: s.end },
                 { start: dslot.start, end: dslot.end }

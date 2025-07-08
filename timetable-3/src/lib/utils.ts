@@ -35,3 +35,11 @@ export const calculateSlotMinutes = (slot) => {
   const endNums = getTimeNumsFromString(slot.end);
   return (endNums[0] - startNums[0]) * 60 + (endNums[1] - startNums[1]);
 };
+
+export const isContains = (slot1, slot2) => {
+  // does slot1 contain slot2
+  return (
+    (slot1.start < slot2.start || slot1.start === slot2.start) &&
+    (slot1.end > slot2.end || slot1.end === slot2.end)
+  );
+};

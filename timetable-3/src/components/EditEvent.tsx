@@ -18,8 +18,8 @@ import { timeSchema } from "@/schemas/schemas";
 import DatePicker from "./ui/date-picker";
 import { v4 as uuidv4 } from "uuid";
 import type { slot } from "@/types/types";
-import { format, parse, set } from "date-fns";
-import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
+import { format, parse } from "date-fns";
+import { calculateSlotMinutes, isContains, isOverlaping } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 export default function EditEvent() {
@@ -59,47 +59,49 @@ function EditForm() {
 
   // calculation of various variables
   const slot = slots.find((s) => s.id === event?._def.extendedProps.slotId);
-  let slotsToday: slot[];
-  let dayStart, dayEnd;
-  const defaultSlots = slots.filter((s) => s.date === "default");
-  const sortedDefaultSlots = defaultSlots.sort((a, b) =>
+  let visibleSlotsToday: slot[] = slots.filter((s) => s.date === slot?.date);
+  let sortedVisibleSlotsToday = visibleSlotsToday.sort((a, b) =>
     a.start < b.start ? -1 : 1
   );
-  if (specificDates.has(slot?.date as string)) {
-    slotsToday = slots.filter((s) => s.date === slot?.date);
-    dayStart = slotsToday[0].start;
-    dayEnd = slotsToday[slotsToday.length - 1].end;
-  } else {
-    slotsToday = slots.filter((s) => s.date === slot?.date);
-    dayStart = slotsToday[0].start;
-    dayEnd = slotsToday[slotsToday.length - 1].end;
-    if (
-      sortedDefaultSlots.length > 0 &&
-      sortedDefaultSlots[0].start < dayStart
-    ) {
-      dayStart = sortedDefaultSlots[0].start;
-    }
-    if (
-      sortedDefaultSlots.length > 0 &&
-      sortedDefaultSlots[sortedDefaultSlots.length - 1].end > dayEnd
-    ) {
-      dayEnd = sortedDefaultSlots[sortedDefaultSlots.length - 1].end;
-    }
-    const toBeAdded = defaultSlots.filter((ds) =>
-      slotsToday.some(
-        (st) =>
-          !isOverlaping(
-            { start: st.start, end: st.end },
-            { start: ds.start, end: ds.end }
-          )
-      )
+  if (!specificDates.has(slot?.date as string)) {
+    // if original slot is default slot
+    const defaultSlots = slots.filter((s) => s.date === "default");
+    let toBeAdded = slots.filter(
+      (s) => s.date === format(event?.start as Date, "yyyy-MM-dd")
     );
-    slotsToday = [...slotsToday, ...toBeAdded];
+    const noEventsToday = toBeAdded.filter((s) => s.type === "no-events");
+    toBeAdded = toBeAdded.filter(
+      (s) =>
+        !noEventsToday.some(
+          (n) =>
+            n.id !== s.id &&
+            isOverlaping(
+              { start: n.start, end: n.end },
+              { start: s.start, end: s.end }
+            )
+        )
+    );
+
+    const filteredDefaultSlots = defaultSlots.filter(
+      (s) =>
+        !toBeAdded.some(
+          (t) =>
+            t.id !== s.id &&
+            isOverlaping(
+              { start: s.start, end: s.end },
+              { start: t.start, end: t.end }
+            )
+        )
+    );
+    visibleSlotsToday = filteredDefaultSlots.concat(toBeAdded);
   }
-  const sortedSlotsToday = slotsToday.sort((a, b) =>
+  sortedVisibleSlotsToday = visibleSlotsToday.sort((a, b) =>
     a.start < b.start ? -1 : 1
   );
-  const breaksToday = sortedSlotsToday.filter((s) => s.type === "break");
+  const dayStart = sortedVisibleSlotsToday[0].start;
+  const dayEnd =
+    sortedVisibleSlotsToday[sortedVisibleSlotsToday.length - 1].end;
+  const breaksToday = sortedVisibleSlotsToday.filter((s) => s.type === "break");
   let longestBreak: slot, longestBreakMins: number;
   if (breaksToday.length > 0) {
     longestBreak = breaksToday.reduce((prev, curr) => {
@@ -109,7 +111,7 @@ function EditForm() {
     });
     longestBreakMins = calculateSlotMinutes(longestBreak);
   }
-  const leavesToday = sortedSlotsToday.filter((s) => s.type === "leave");
+  const leavesToday = sortedVisibleSlotsToday.filter((s) => s.type === "leave");
   const defaultDate = format(event?.start as Date, "yyyy-MM-dd");
   const defaultStart = format(new Date(event?.start as Date), "HH:mm");
   const defaultEnd = format(event?.end as Date, "HH:mm");
@@ -247,7 +249,19 @@ function EditForm() {
     /**
      * if all values are same as before, do nothing
      * create an edited slot
-     * if original slot is default slot, make a copy of it and push it
+     * if edited slot's times are out of bounds of original times, add "no-events" to original times
+     * else:
+     *  - if edited start time is after original start time:
+     *     - add "no-events"
+     *  - else (new start time is before original start time):
+     *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
+     *     - else if there is "no-events" event whose end time is within edited slot's start and end time, change its end time to edited slot's start time
+     *  - if edited end time is before original end time:
+     *     - add "no-events"
+     *  - else (new end time is after original end time):
+     *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
+     *     - else if there is "no-events" event whose start time is within edited slot's end time, change its start time to edited slot's end time
+     * if original slot is default slot, push edited slot
      * else edit the original slot
      */
 
@@ -272,12 +286,79 @@ function EditForm() {
       return;
     }
 
-    if (slot?.date === "default") {
-      setSlots((prev) => [...prev, editedSlot]);
+    let newSlotsToday = slots.filter(
+      (s) =>
+        s.date === editedSlot.date &&
+        !isOverlaping(
+          { start: s.start, end: s.end },
+          { start: editedSlot.start, end: editedSlot.end }
+        )
+    );
+    const generateNoEvents = (start: string, end: string) => {
+      return {
+        id: uuidv4(),
+        title: "No events",
+        description: "",
+        start: start,
+        end: end,
+        date: format(data.date as Date, "yyyy-MM-dd"),
+        type: "no-events",
+      } as slot;
+    };
+
+    const originalStart = slot?.start as string;
+    const originalEnd = slot?.end as string;
+
+    if (
+      (editedSlot.start < originalStart && editedSlot.end < originalStart) ||
+      (editedSlot.start > originalEnd && editedSlot.end > originalEnd)
+    ) {
+      newSlotsToday.push(generateNoEvents(originalStart, originalEnd));
     } else {
-      setSlots((prev) => prev.map((s) => (s.id === slot?.id ? editedSlot : s)));
+      if (editedSlot.start > originalStart) {
+        newSlotsToday.push(generateNoEvents(originalStart, editedSlot.start));
+      } else if (editedSlot.start < originalStart) {
+        newSlotsToday = newSlotsToday.filter(
+          (s) => !(s.type === "no-events" && isContains(editedSlot, s))
+        );
+
+        for (let i = 0; i < newSlotsToday.length; i++) {
+          const curr = newSlotsToday[i];
+          if (
+            curr.type === "no-events" &&
+            curr.end > editedSlot.start &&
+            (curr.end < editedSlot.end || curr.end === editedSlot.end)
+          ) {
+            curr.end = editedSlot.start;
+          }
+        }
+      }
+
+      if (editedSlot.end < originalEnd) {
+        newSlotsToday.push(generateNoEvents(editedSlot.end, originalEnd));
+      } else if (editedSlot.end > originalEnd) {
+        newSlotsToday = newSlotsToday.filter(
+          (s) => !(s.type === "no-events" && isContains(editedSlot, s))
+        );
+
+        for (let i = 0; i < newSlotsToday.length; i++) {
+          const curr = newSlotsToday[i];
+          if (
+            curr.type === "no-events" &&
+            curr.start > editedSlot.start &&
+            (curr.start < editedSlot.end || curr.start === editedSlot.end)
+          ) {
+            curr.start = editedSlot.end;
+          }
+        }
+      }
     }
 
+    let todayFiltered = slots.filter((s) => s.date !== editedSlot.date);
+    if (slot?.date !== "default") {
+      todayFiltered = todayFiltered.filter((s) => s.id !== slot?.id);
+    }
+    setSlots([...todayFiltered, ...newSlotsToday, editedSlot]);
     setEditEvent({ showOverlay: false, eventData: null });
   };
 
