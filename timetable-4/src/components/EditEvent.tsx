@@ -16,12 +16,11 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { timeSchema } from "@/schemas/schemas";
 import DatePicker from "./ui/date-picker";
-import { v4 as uuidv4 } from "uuid";
-import type { slot } from "@/types/types";
 import { format, parse } from "date-fns";
 import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import deepcopy from "deepcopy";
+import type { slot } from "@/types/types";
+import { v4 as uuidv4 } from "uuid";
 
 export default function EditEvent() {
   const { editEvent, setEditEvent } = useTimetable();
@@ -49,75 +48,17 @@ export default function EditEvent() {
 
 function EditForm() {
   const {
-    slots,
-    setSlots,
-    specificDates,
+    allSlots,
+    setAllSlots,
     editEvent: { eventData: event },
     setEditEvent,
   } = useTimetable();
 
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
 
-  // calculation of various variables
-  const slot = slots.find((s) => s.id === event?._def.extendedProps.slotId);
-  let visibleSlotsToday: slot[] = slots.filter((s) => s.date === slot?.date);
-  let sortedVisibleSlotsToday = visibleSlotsToday.sort((a, b) =>
-    a.start < b.start ? -1 : 1
-  );
-  if (!specificDates.has(slot?.date as string)) {
-    // if original slot is default slot
-    const defaultSlots = slots.filter((s) => s.date === "default");
-    let toBeAdded = slots.filter(
-      (s) => s.date === format(event?.start as Date, "yyyy-MM-dd")
-    );
-    const noEventsToday = toBeAdded.filter((s) => s.type === "no-events");
-    toBeAdded = toBeAdded.filter(
-      (s) =>
-        !noEventsToday.some(
-          (n) =>
-            n.id !== s.id &&
-            isOverlaping(
-              { start: n.start, end: n.end },
-              { start: s.start, end: s.end }
-            )
-        )
-    );
-
-    const filteredDefaultSlots = defaultSlots.filter(
-      (s) =>
-        !toBeAdded.some(
-          (t) =>
-            t.id !== s.id &&
-            isOverlaping(
-              { start: s.start, end: s.end },
-              { start: t.start, end: t.end }
-            )
-        )
-    );
-    visibleSlotsToday = filteredDefaultSlots.concat(toBeAdded);
-  }
-  sortedVisibleSlotsToday = visibleSlotsToday.sort((a, b) =>
-    a.start < b.start ? -1 : 1
-  );
-  const dayStart = sortedVisibleSlotsToday[0].start;
-  const dayEnd =
-    sortedVisibleSlotsToday[sortedVisibleSlotsToday.length - 1].end;
-  const breaksToday = sortedVisibleSlotsToday.filter((s) => s.type === "break");
-  let longestBreak: slot, longestBreakMins: number;
-  if (breaksToday.length > 0) {
-    longestBreak = breaksToday.reduce((prev, curr) => {
-      const prevMins = calculateSlotMinutes(prev);
-      const currMins = calculateSlotMinutes(curr);
-      return prevMins > currMins ? prev : curr;
-    });
-    longestBreakMins = calculateSlotMinutes(longestBreak);
-  }
-  const leavesToday = sortedVisibleSlotsToday.filter((s) => s.type === "leave");
-  const defaultDate = format(event?.start as Date, "yyyy-MM-dd");
-  const defaultStart = format(new Date(event?.start as Date), "HH:mm");
-  const defaultEnd = format(event?.end as Date, "HH:mm");
-
-  console.log(sortedVisibleSlotsToday);
+  const todayDate = format(event?.start as Date, "yyyy-MM-dd");
+  const slotsToday = allSlots.find((s) => s.date === todayDate)?.slots ?? [];
+  const slot = slotsToday.find((s) => s.id === event?.extendedProps.slotId);
 
   const formSchema = z
     .object({
@@ -249,40 +190,7 @@ function EditForm() {
   });
 
   const editSlot = (data: z.infer<typeof formSchema>) => {
-    /**
-     * create edited slot
-     * if all values are same as before, do nothing
-     * if edited slot's times are out of bounds of the original times
-     *  - if there are "no-events" before AND after the original slot
-     *     - remove both slots
-     *     - add one "no-events" with start time = first "no-events" 's start time, and end time = second "no-events" 's end time
-     *  - else:
-     *     - if there is "no-events" before the original slot
-     *        - change its end time to the original slot's end time
-     *     - else if there is "no-events" after the original slot
-     *        - change its start time to the original slot's start time
-     * else:
-     *  - if edited start time is after original start time:
-     *     - if previous event is "no-events"
-     *        - change prev "no-events" 's end time to edited slot's start time
-     *     - else
-     *        - add "no-events"
-     *  - else (new start time is before original start time):
-     *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
-     *     - else if there is "no-events" event whose end time is within edited slot's start and end time, change its end time to edited slot's start time
-     *  - if edited end time is before original end time:
-     *     - if next event is "no-events"
-     *        - change next "no-events" 's start time to edited slot's end time
-     *     - else
-     *        - add "no-events"
-     *  - else (new end time is after original end time):
-     *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
-     *     - else if there is "no-events" event whose start time is within edited slot's end time, change its start time to edited slot's end time
-     * if original slot is default slot, push edited slot to the slots state
-     * else edit the original slot
-     */
-
-    const editedSlot: slot = {
+    const edited: slot = {
       id: uuidv4(),
       title: data.title,
       description: data.description,
@@ -292,110 +200,23 @@ function EditForm() {
       type: slot?.type || "slot",
     };
 
-    if (
-      slot?.title === editedSlot.title &&
-      slot?.description === editedSlot.description &&
-      slot?.start === editedSlot.start &&
-      slot?.end === editedSlot.end &&
-      slot?.date === editedSlot.date
-    ) {
-      setEditEvent({ showOverlay: false, eventData: null });
-      return;
-    }
-
-    const generateNoEvents = (start: string, end: string) => {
-      return {
-        id: uuidv4(),
-        title: "No events",
-        description: "",
-        start: start,
-        end: end,
-        date: format(data.date as Date, "yyyy-MM-dd"),
-        type: "no-events",
-      } as slot;
-    };
-
-    const originalStart = slot?.start as string;
-    const originalEnd = slot?.end as string;
-    const slotsToday = slots.filter((s) => s.date === slot?.date);
-    const sortedSlotsToday = slotsToday.sort((a, b) =>
-      a.start < b.start ? -1 : 1
+    const editedSlots = slotsToday.map((s) => (s.id === slot?.id ? edited : s));
+    const notOverlapping = editedSlots.filter((s) => !isOverlaping(edited, s));
+    setAllSlots((prev) =>
+      prev.map((s) =>
+        s.date === todayDate ? { ...s, slots: [...notOverlapping, edited] } : s
+      )
     );
-    const currentSlotIndex = sortedSlotsToday.findIndex(
-      (s) => s.id === slot?.id
-    );
-    const prevSlot =
-      currentSlotIndex > 0 ? sortedSlotsToday[currentSlotIndex - 1] : undefined;
-    const nextSlot =
-      currentSlotIndex < sortedSlotsToday.length - 1
-        ? sortedSlotsToday[currentSlotIndex + 1]
-        : undefined;
-
-    let newSlotsToday = deepcopy(slotsToday);
-    const newPrevSlot = newSlotsToday.find(
-      (s) => s.id === prevSlot?.id
-    ) as slot;
-    const newNextSlot = newSlotsToday.find(
-      (s) => s.id === nextSlot?.id
-    ) as slot;
-    if (
-      (editedSlot.start < originalStart && editedSlot.end < originalStart) ||
-      (editedSlot.start > originalEnd && editedSlot.end > originalEnd)
-    ) {
-      if (
-        prevSlot &&
-        nextSlot &&
-        prevSlot.type === "no-events" &&
-        nextSlot.type === "no-events"
-      ) {
-        newSlotsToday = newSlotsToday.filter(
-          (s) => s.id !== prevSlot.id || s.id !== nextSlot.id
-        );
-        newSlotsToday.push(generateNoEvents(prevSlot.start, nextSlot.end));
-      } else {
-        if (prevSlot && prevSlot.type === "no-events") {
-          newPrevSlot.end = slot?.end as string;
-        } else if (nextSlot && nextSlot.type === "no-events") {
-          newNextSlot.start = slot?.start as string;
-        }
-      }
-    } else {
-      if (editedSlot.start > originalStart) {
-        if (prevSlot && prevSlot.type === "no-events") {
-          newPrevSlot.end = slot?.start as string;
-        } else {
-          newSlotsToday.push(
-            generateNoEvents(slot?.start as string, editedSlot.start)
-          );
-        }
-      } else {
-      }
-    }
-
     setEditEvent({ showOverlay: false, eventData: null });
   };
 
   const deleteSlot = () => {
-    /**
-     * if default slot, add buffer of that duration
-     * else, remove slot
-     */
-    if (slot?.date === "default") {
-      setSlots((prev) => [
-        ...prev,
-        {
-          id: uuidv4(),
-          title: "No Events",
-          description: "",
-          start: defaultStart,
-          end: defaultEnd,
-          date: defaultDate,
-          type: "no-events",
-        },
-      ]);
-    } else {
-      setSlots((prev) => prev.filter((s) => s.id !== slot?.id));
-    }
+    const deleted = slotsToday.filter(
+      (slot) => slot.id !== event?.extendedProps?.slotId
+    );
+    setAllSlots((prev) =>
+      prev.map((s) => (s.date === todayDate ? { ...s, slots: deleted } : s))
+    );
     setEditEvent({ showOverlay: false, eventData: null });
   };
 
@@ -403,6 +224,23 @@ function EditForm() {
   const watchStart = form.watch("start");
   const watchEnd = form.watch("end");
   const dependency = watchStart + watchEnd;
+  const breaksToday = slotsToday.filter((slot) => slot.type === "break");
+  const leavesToday = slotsToday.filter((slot) => slot.type === "leave");
+  const longestBreak = breaksToday.reduce((prev, curr) => {
+    const prevMins = calculateSlotMinutes({
+      start: prev.start,
+      end: prev.end,
+    });
+    const currMins = calculateSlotMinutes({
+      start: curr.start,
+      end: curr.end,
+    });
+    return prevMins > currMins ? prev : curr;
+  });
+  const longestBreakMins = calculateSlotMinutes({
+    start: longestBreak?.start,
+    end: longestBreak?.end,
+  });
   useEffect(() => {
     if (!isConfirmClicked) return;
 
