@@ -32,12 +32,12 @@ export default function Calendar() {
      *  - else:
      *     - if there are slots available on that date, then push them
      *     - loop through default slots and push non-overlapping slots
-     *     - go through the day and add buffers for empty time blocks
+     *     - go through the day and add buffers for empty time blocks (do not add buffers for no-events slots)
      */
 
     const start = info.start;
     const end = info.end;
-    const generated: EventInput[] = [];
+    let generated: EventInput[] = [];
 
     for (
       let date = new Date(start);
@@ -87,9 +87,9 @@ export default function Calendar() {
             },
             color: getSlotColor(s.type),
           };
-          if (s.type === "no-events") {
-            temp.display = "none";
-          }
+          // if (s.type === "no-events") {
+          //   temp.display = "none";
+          // }
           return temp;
         });
         generated.push(...eventsToday);
@@ -170,15 +170,23 @@ export default function Calendar() {
 
           if (i === 0) {
             if (eventStart > dayStart && !specificDates.has(dateStr)) {
-              generated.push(generateBufferEvent(dayStart, eventStart));
+              if (event.extendedProps?.type === "no-events") {
+                event.start = `${dateStr}T${dayStart}:00`;
+              } else {
+                generated.push(generateBufferEvent(dayStart, eventStart));
+              }
             }
             if (eventEnd < nextEventStart) {
-              if (nextEvent.extendedProps?.type === "buffer") {
+              if (nextEvent.extendedProps?.type === "no-events") {
                 nextEvent.start = `${dateStr}T${eventEnd}:00`;
-              } else if (event.extendedProps?.type === "buffer") {
-                event.end = `${dateStr}T${nextEventStart}:00`;
               } else {
-                generated.push(generateBufferEvent(eventEnd, nextEventStart));
+                if (nextEvent.extendedProps?.type === "buffer") {
+                  nextEvent.start = `${dateStr}T${eventEnd}:00`;
+                } else if (event.extendedProps?.type === "buffer") {
+                  event.end = `${dateStr}T${nextEventStart}:00`;
+                } else {
+                  generated.push(generateBufferEvent(eventEnd, nextEventStart));
+                }
               }
             }
           } else if (
@@ -186,14 +194,24 @@ export default function Calendar() {
             eventEnd < dayEnd &&
             !specificDates.has(dateStr)
           ) {
-            generated.push(generateBufferEvent(eventEnd, dayEnd));
-          } else if (eventEnd < nextEventStart) {
-            if (nextEvent.extendedProps?.type === "buffer") {
-              nextEvent.start = `${dateStr}T${eventEnd}:00`;
-            } else if (event.extendedProps?.type === "buffer") {
-              event.end = `${dateStr}T${nextEventStart}:00`;
+            if (event.extendedProps?.type === "no-events") {
+              event.end = `${dateStr}T${dayEnd}:00`;
             } else {
-              generated.push(generateBufferEvent(eventEnd, nextEventStart));
+              generated.push(generateBufferEvent(eventEnd, dayEnd));
+            }
+          } else if (eventEnd < nextEventStart) {
+            if (event.extendedProps?.type === "no-events") {
+              event.end = `${dateStr}T${nextEventStart}:00`;
+            } else if (nextEvent.extendedProps?.type === "no-events") {
+              nextEvent.start = `${dateStr}T${eventEnd}:00`;
+            } else {
+              if (nextEvent.extendedProps?.type === "buffer") {
+                nextEvent.start = `${dateStr}T${eventEnd}:00`;
+              } else if (event.extendedProps?.type === "buffer") {
+                event.end = `${dateStr}T${nextEventStart}:00`;
+              } else {
+                generated.push(generateBufferEvent(eventEnd, nextEventStart));
+              }
             }
           }
         }

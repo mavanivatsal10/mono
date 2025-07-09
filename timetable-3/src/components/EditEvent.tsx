@@ -19,8 +19,9 @@ import DatePicker from "./ui/date-picker";
 import { v4 as uuidv4 } from "uuid";
 import type { slot } from "@/types/types";
 import { format, parse } from "date-fns";
-import { calculateSlotMinutes, isContains, isOverlaping } from "@/lib/utils";
+import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import deepcopy from "deepcopy";
 
 export default function EditEvent() {
   const { editEvent, setEditEvent } = useTimetable();
@@ -115,6 +116,8 @@ function EditForm() {
   const defaultDate = format(event?.start as Date, "yyyy-MM-dd");
   const defaultStart = format(new Date(event?.start as Date), "HH:mm");
   const defaultEnd = format(event?.end as Date, "HH:mm");
+
+  console.log(sortedVisibleSlotsToday);
 
   const formSchema = z
     .object({
@@ -247,21 +250,35 @@ function EditForm() {
 
   const editSlot = (data: z.infer<typeof formSchema>) => {
     /**
+     * create edited slot
      * if all values are same as before, do nothing
-     * create an edited slot
-     * if edited slot's times are out of bounds of original times, add "no-events" to original times
+     * if edited slot's times are out of bounds of the original times
+     *  - if there are "no-events" before AND after the original slot
+     *     - remove both slots
+     *     - add one "no-events" with start time = first "no-events" 's start time, and end time = second "no-events" 's end time
+     *  - else:
+     *     - if there is "no-events" before the original slot
+     *        - change its end time to the original slot's end time
+     *     - else if there is "no-events" after the original slot
+     *        - change its start time to the original slot's start time
      * else:
      *  - if edited start time is after original start time:
-     *     - add "no-events"
+     *     - if previous event is "no-events"
+     *        - change prev "no-events" 's end time to edited slot's start time
+     *     - else
+     *        - add "no-events"
      *  - else (new start time is before original start time):
      *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
      *     - else if there is "no-events" event whose end time is within edited slot's start and end time, change its end time to edited slot's start time
      *  - if edited end time is before original end time:
-     *     - add "no-events"
+     *     - if next event is "no-events"
+     *        - change next "no-events" 's start time to edited slot's end time
+     *     - else
+     *        - add "no-events"
      *  - else (new end time is after original end time):
      *     - if there is "no-events" whose start and end time are within edited slot's start and end time, remove it
      *     - else if there is "no-events" event whose start time is within edited slot's end time, change its start time to edited slot's end time
-     * if original slot is default slot, push edited slot
+     * if original slot is default slot, push edited slot to the slots state
      * else edit the original slot
      */
 
@@ -286,14 +303,6 @@ function EditForm() {
       return;
     }
 
-    let newSlotsToday = slots.filter(
-      (s) =>
-        s.date === editedSlot.date &&
-        !isOverlaping(
-          { start: s.start, end: s.end },
-          { start: editedSlot.start, end: editedSlot.end }
-        )
-    );
     const generateNoEvents = (start: string, end: string) => {
       return {
         id: uuidv4(),
@@ -308,57 +317,61 @@ function EditForm() {
 
     const originalStart = slot?.start as string;
     const originalEnd = slot?.end as string;
+    const slotsToday = slots.filter((s) => s.date === slot?.date);
+    const sortedSlotsToday = slotsToday.sort((a, b) =>
+      a.start < b.start ? -1 : 1
+    );
+    const currentSlotIndex = sortedSlotsToday.findIndex(
+      (s) => s.id === slot?.id
+    );
+    const prevSlot =
+      currentSlotIndex > 0 ? sortedSlotsToday[currentSlotIndex - 1] : undefined;
+    const nextSlot =
+      currentSlotIndex < sortedSlotsToday.length - 1
+        ? sortedSlotsToday[currentSlotIndex + 1]
+        : undefined;
 
+    let newSlotsToday = deepcopy(slotsToday);
+    const newPrevSlot = newSlotsToday.find(
+      (s) => s.id === prevSlot?.id
+    ) as slot;
+    const newNextSlot = newSlotsToday.find(
+      (s) => s.id === nextSlot?.id
+    ) as slot;
     if (
       (editedSlot.start < originalStart && editedSlot.end < originalStart) ||
       (editedSlot.start > originalEnd && editedSlot.end > originalEnd)
     ) {
-      newSlotsToday.push(generateNoEvents(originalStart, originalEnd));
+      if (
+        prevSlot &&
+        nextSlot &&
+        prevSlot.type === "no-events" &&
+        nextSlot.type === "no-events"
+      ) {
+        newSlotsToday = newSlotsToday.filter(
+          (s) => s.id !== prevSlot.id || s.id !== nextSlot.id
+        );
+        newSlotsToday.push(generateNoEvents(prevSlot.start, nextSlot.end));
+      } else {
+        if (prevSlot && prevSlot.type === "no-events") {
+          newPrevSlot.end = slot?.end as string;
+        } else if (nextSlot && nextSlot.type === "no-events") {
+          newNextSlot.start = slot?.start as string;
+        }
+      }
     } else {
       if (editedSlot.start > originalStart) {
-        newSlotsToday.push(generateNoEvents(originalStart, editedSlot.start));
-      } else if (editedSlot.start < originalStart) {
-        newSlotsToday = newSlotsToday.filter(
-          (s) => !(s.type === "no-events" && isContains(editedSlot, s))
-        );
-
-        for (let i = 0; i < newSlotsToday.length; i++) {
-          const curr = newSlotsToday[i];
-          if (
-            curr.type === "no-events" &&
-            curr.end > editedSlot.start &&
-            (curr.end < editedSlot.end || curr.end === editedSlot.end)
-          ) {
-            curr.end = editedSlot.start;
-          }
+        if (prevSlot && prevSlot.type === "no-events") {
+          newPrevSlot.end = slot?.start as string;
+        } else {
+          newSlotsToday.push(
+            generateNoEvents(slot?.start as string, editedSlot.start)
+          );
         }
-      }
-
-      if (editedSlot.end < originalEnd) {
-        newSlotsToday.push(generateNoEvents(editedSlot.end, originalEnd));
-      } else if (editedSlot.end > originalEnd) {
-        newSlotsToday = newSlotsToday.filter(
-          (s) => !(s.type === "no-events" && isContains(editedSlot, s))
-        );
-
-        for (let i = 0; i < newSlotsToday.length; i++) {
-          const curr = newSlotsToday[i];
-          if (
-            curr.type === "no-events" &&
-            curr.start > editedSlot.start &&
-            (curr.start < editedSlot.end || curr.start === editedSlot.end)
-          ) {
-            curr.start = editedSlot.end;
-          }
-        }
+      } else {
       }
     }
 
-    let todayFiltered = slots.filter((s) => s.date !== editedSlot.date);
-    if (slot?.date !== "default") {
-      todayFiltered = todayFiltered.filter((s) => s.id !== slot?.id);
-    }
-    setSlots([...todayFiltered, ...newSlotsToday, editedSlot]);
     setEditEvent({ showOverlay: false, eventData: null });
   };
 
