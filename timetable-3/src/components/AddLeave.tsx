@@ -117,7 +117,7 @@ export default function AddLeave({
     const leaveEnd = data.end;
 
     // check if intersecting with any other leave
-    const leavesToday = slots.filter(
+    const leavesToday = allSlots.filter(
       (s) => s.type === "leave" && s.date === leaveDate
     );
 
@@ -136,7 +136,7 @@ export default function AddLeave({
       return;
     }
 
-    const slotsToday = slots.filter((s) => s.date === leaveDate);
+    const slotsToday = allSlots.filter((s) => s.date === leaveDate);
     const cleanedSlots = slotsToday.filter(
       (s) =>
         !isOverlaping(
@@ -155,7 +155,7 @@ export default function AddLeave({
       type: "leave",
     });
 
-    const remainingSlots = slots.filter((s) => s.date !== leaveDate);
+    const remainingSlots = allSlots.filter((s) => s.date !== leaveDate);
     setSlots([...remainingSlots, ...cleanedSlots]);
 
     // add buffers if specific schedule today
@@ -230,7 +230,7 @@ export default function AddLeave({
   useEffect(() => {
     const leaveDate = format(watchDate as Date, "yyyy-MM-dd");
 
-    const leavesToday = slots.filter(
+    const leavesToday = allSlots.filter(
       (s) => s.type === "leave" && s.date === leaveDate
     );
 
