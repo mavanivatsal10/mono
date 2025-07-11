@@ -35,12 +35,8 @@ import {
   SelectValue,
 } from "./ui/select";
 
-export default function AddSchedule({
-  setOpen,
-}: {
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
-  const { setAllSlots } = useTimetable();
+export default function AddSchedule() {
+  const { setAllSlots, isOpenAdd, setIsOpenAdd } = useTimetable();
   const [isSubmitClicked, setIsSubmitClicked] = useState(false); // flag to show/remove errors
 
   const months = [
@@ -60,8 +56,6 @@ export default function AddSchedule({
 
   const formSchema = z
     .object({
-      title: z.string().min(1, "Title is required"),
-      description: z.string(),
       date: z.union([z.date().nullable(), z.literal("default")]),
       isDefault: z.boolean(),
       month: z.enum(["", ...months]),
@@ -117,6 +111,100 @@ export default function AddSchedule({
           path: ["date"],
           code: z.ZodIssueCode.custom,
         });
+      }
+
+      const sortedBreaks = [...data.breaks].sort((a, b) =>
+        a.start < b.start ? -1 : 1
+      );
+
+      console.log(sortedBreaks);
+
+      for (let i = 0; i < sortedBreaks.length; i++) {
+        if (sortedBreaks[i].start === "" || sortedBreaks[i].end === "") {
+          continue;
+        }
+        if (i === 0) {
+          if (
+            calculateSlotMinutes({
+              start: data.start,
+              end: sortedBreaks[i].start,
+            }) < 15
+          ) {
+            const index = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i].start
+            );
+            ctx.addIssue({
+              message:
+                "Break cannot start within 15 minutes of day start time.",
+              path: ["breaks", index, "start"],
+              code: z.ZodIssueCode.custom,
+            });
+          }
+          if (
+            sortedBreaks.length > 1 &&
+            calculateSlotMinutes({
+              start: sortedBreaks[i].end,
+              end: sortedBreaks[i + 1].start,
+            }) < 15
+          ) {
+            const i1 = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i].start
+            );
+            ctx.addIssue({
+              message: "Consecutive breaks cannot be within 15 minutes.",
+              path: ["breaks", i1, "end"],
+              code: z.ZodIssueCode.custom,
+            });
+            const i2 = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i + 1].start
+            );
+            ctx.addIssue({
+              message: "Consecutive breaks cannot be within 15 minutes.",
+              path: ["breaks", i2, "start"],
+              code: z.ZodIssueCode.custom,
+            });
+          }
+        } else if (i === sortedBreaks.length - 1) {
+          if (
+            calculateSlotMinutes({
+              start: sortedBreaks[i].end,
+              end: data.end,
+            }) < 15
+          ) {
+            const index = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i].start
+            );
+            ctx.addIssue({
+              message: "Break cannot end within 15 minutes of day end time.",
+              path: ["breaks", index, "end"],
+              code: z.ZodIssueCode.custom,
+            });
+          }
+        } else {
+          if (
+            calculateSlotMinutes({
+              start: sortedBreaks[i].end,
+              end: sortedBreaks[i + 1].start,
+            }) < 15
+          ) {
+            const i1 = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i].start
+            );
+            ctx.addIssue({
+              message: "Breaks cannot be within 15 minutes.",
+              path: ["breaks", i1, "end"],
+              code: z.ZodIssueCode.custom,
+            });
+            const i2 = data.breaks.findIndex(
+              (b) => b.start === sortedBreaks[i + 1].start
+            );
+            ctx.addIssue({
+              message: "Breaks cannot be within 15 minutes.",
+              path: ["breaks", i2, "start"],
+              code: z.ZodIssueCode.custom,
+            });
+          }
+        }
       }
 
       data.breaks.forEach((breakItem, index) => {
@@ -196,9 +284,7 @@ export default function AddSchedule({
 
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "Timetable",
-      description: "",
+    defaultValues: isOpenAdd.addSchedule || {
       date: new Date(),
       month: months[new Date().getMonth()],
       isDefault: true,
@@ -480,7 +566,12 @@ export default function AddSchedule({
 
       setAllSlots(generated);
     }
-    setOpen(false);
+    setIsOpenAdd({
+      open: false,
+      addSchedule: null,
+      addSlot: null,
+      addLeave: null,
+    });
   };
 
   // remove errors if conditions are met else add them

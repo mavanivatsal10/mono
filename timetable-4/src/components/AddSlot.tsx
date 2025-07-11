@@ -27,12 +27,8 @@ import type { slot } from "@/types/types";
 import { useEffect, useState } from "react";
 import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
 
-export default function AddSlot({
-  setOpen,
-}: {
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
-  const { allSlots, setAllSlots } = useTimetable();
+export default function AddSlot() {
+  const { allSlots, setAllSlots, isOpenAdd, setIsOpenAdd } = useTimetable();
   const [confirmTwice, setConfirmTwice] = useState(false);
   const [confirmClicked, setConfirmClicked] = useState(false);
 
@@ -66,7 +62,7 @@ export default function AddSlot({
 
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: isOpenAdd.addSlot || {
       title: "Work Slot",
       description: "",
       date: new Date(),
@@ -158,7 +154,12 @@ export default function AddSlot({
       );
     });
 
-    setOpen(false);
+    setIsOpenAdd({
+      open: false,
+      addSchedule: null,
+      addSlot: null,
+      addLeave: null,
+    });
   };
 
   const watchStart = form.watch("start");

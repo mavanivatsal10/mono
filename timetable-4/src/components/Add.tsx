@@ -3,16 +3,23 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import AddSchedule from "./AddSchedule";
 import AddLeave from "./AddLeave";
-import { useState } from "react";
 import AddSlot from "./AddSlot";
+import { useTimetable } from "@/hooks/useTimetable";
 
 export default function DialogDemo() {
-  const [open, setOpen] = useState(false);
+  const { isOpenAdd, setIsOpenAdd } = useTimetable();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={isOpenAdd.open}
+      onOpenChange={(open) => setIsOpenAdd((prev) => ({ ...prev, open }))}
+    >
       <DialogTrigger asChild>
-        <Button onClick={() => setOpen(true)}>Add</Button>
+        <Button
+          onClick={() => setIsOpenAdd((prev) => ({ ...prev, open: true }))}
+        >
+          Add
+        </Button>
       </DialogTrigger>
       <DialogContent
         className="overflow-auto"
@@ -34,13 +41,13 @@ export default function DialogDemo() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="schedule" className="w-full h-full">
-            <AddSchedule setOpen={setOpen} />
+            <AddSchedule />
           </TabsContent>
           <TabsContent value="slot" className="w-full h-full">
-            <AddSlot setOpen={setOpen} />
+            <AddSlot />
           </TabsContent>
           <TabsContent value="leave" className="w-full h-full">
-            <AddLeave setOpen={setOpen} />
+            <AddLeave />
           </TabsContent>
         </Tabs>
       </DialogContent>

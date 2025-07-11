@@ -16,17 +16,13 @@ import { Input } from "./ui/input";
 import { isOverlaping } from "@/lib/utils";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTimetable } from "@/hooks/useTimetable";
 import type { slot } from "@/types/types";
 import { timeSchema } from "@/schemas/schemas";
 
-export default function AddLeave({
-  setOpen,
-}: {
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
-  const { allSlots, setAllSlots } = useTimetable();
+export default function AddLeave() {
+  const { allSlots, setAllSlots, isOpenAdd, setIsOpenAdd } = useTimetable();
   const [confirmTwice, setConfirmTwice] = useState(false);
 
   const formSchema = z
@@ -95,7 +91,7 @@ export default function AddLeave({
 
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: isOpenAdd.addLeave || {
       date: new Date(),
       holidayType: "full",
       halfSession: "morning",
@@ -178,7 +174,12 @@ export default function AddLeave({
       );
     });
 
-    setOpen(false);
+    setIsOpenAdd({
+      open: false,
+      addSchedule: null,
+      addSlot: null,
+      addLeave: null,
+    });
   }
 
   return (
@@ -195,7 +196,10 @@ export default function AddLeave({
               <FormItem className="w-50">
                 <FormLabel>Date</FormLabel>
                 <FormControl>
-                  <DatePicker {...field} />
+                  <DatePicker
+                    value={field.value ? field.value : undefined}
+                    onChange={field.onChange}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

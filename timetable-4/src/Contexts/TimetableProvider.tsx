@@ -8,11 +8,12 @@ export const TimetableProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [allSlots, setAllSlots] = useState<{
-    date: string,
-    slots: slot[]
-  }[]>([]);
-  const [specificDates, setSpecificDates] = useState<Set<string>>(new Set());
+  const [allSlots, setAllSlots] = useState<
+    {
+      date: string;
+      slots: slot[];
+    }[]
+  >([]);
   const [editEvent, setEditEvent] = useState<{
     showOverlay: boolean;
     eventData: EventImpl | null;
@@ -20,16 +21,22 @@ export const TimetableProvider = ({
     showOverlay: false,
     eventData: null,
   });
+  const [isOpenAdd, setIsOpenAdd] = useState({
+    open: false,
+    addSchedule: null,
+    addSlot: null,
+    addLeave: null,
+  });
 
   return (
     <TimetableContext.Provider
       value={{
         allSlots,
         setAllSlots,
-        specificDates,
-        setSpecificDates,
         editEvent,
         setEditEvent,
+        isOpenAdd,
+        setIsOpenAdd,
       }}
     >
       {children}
