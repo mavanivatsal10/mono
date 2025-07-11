@@ -240,17 +240,20 @@ function EditForm() {
   const dependency = watchStart + watchEnd;
   const breaksToday = slotsToday.filter((slot) => slot.type === "break");
   const leavesToday = slotsToday.filter((slot) => slot.type === "leave");
-  const longestBreak = breaksToday.reduce((prev, curr) => {
-    const prevMins = calculateSlotMinutes({
-      start: prev.start,
-      end: prev.end,
-    });
-    const currMins = calculateSlotMinutes({
-      start: curr.start,
-      end: curr.end,
-    });
-    return prevMins > currMins ? prev : curr;
-  });
+  const longestBreak = breaksToday.reduce(
+    (prev, curr) => {
+      const prevMins = calculateSlotMinutes({
+        start: prev.start,
+        end: prev.end,
+      });
+      const currMins = calculateSlotMinutes({
+        start: curr.start,
+        end: curr.end,
+      });
+      return prevMins > currMins ? prev : curr;
+    },
+    { start: "00:00", end: "00:00" }
+  );
   const longestBreakMins = calculateSlotMinutes({
     start: longestBreak?.start,
     end: longestBreak?.end,

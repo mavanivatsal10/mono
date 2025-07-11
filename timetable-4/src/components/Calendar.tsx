@@ -1,22 +1,25 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "../index.css";
 import { useEffect, useRef } from "react";
 import { useTimetable } from "@/hooks/useTimetable";
 import type {
   EventClickArg,
+  EventDropArg,
   EventInput,
   EventSourceFuncArg,
 } from "@fullcalendar/core/index.js";
 import { format } from "date-fns";
-import { isOverlaping } from "@/lib/utils";
 import EditEvent from "./EditEvent";
 import { toast } from "sonner";
+import type { slot } from "@/types/types";
+import { calculateSlotMinutes } from "@/lib/utils";
 
 export default function Calendar() {
-  const { allSlots, editEvent, setEditEvent } = useTimetable();
+  const { allSlots, setAllSlots, editEvent, setEditEvent } = useTimetable();
 
   const getSlotColor = (type: string) => {
     if (type === "slot") return "#118ab2";
@@ -60,6 +63,104 @@ export default function Calendar() {
     return generated;
   };
 
+  const handleEventClick = (arg: EventClickArg) => {
+    arg.jsEvent.stopPropagation();
+
+    if (arg.event._def.extendedProps.type === "buffer") {
+      toast("Cannot edit buffer slots");
+      return;
+    }
+
+    setEditEvent({
+      showOverlay: true,
+      eventData: arg.event,
+    });
+  };
+
+  const handleEventDrop = (eventDropInfo: EventDropArg) => {
+    const newEvent = eventDropInfo.event;
+    const newDate = format(newEvent.start as Date, "yyyy-MM-dd");
+    const oldEvent = eventDropInfo.oldEvent;
+    const oldDate = format(oldEvent.start as Date, "yyyy-MM-dd");
+
+    if (newEvent._def.extendedProps.type === "buffer") {
+      toast("Cannot move buffer slots");
+      eventDropInfo.revert();
+      return;
+    }
+
+    if (newEvent._def.extendedProps.type === "break") {
+      const newDateAllSlots =
+        allSlots.find((s) => s.date === newDate)?.slots ?? [];
+      const newDateBreaks = newDateAllSlots.filter((s) => s.type === "break");
+
+      if (newDateBreaks.length >= 3) {
+        toast("Cannot have more than 3 breaks per day.");
+        eventDropInfo.revert();
+        return;
+      }
+
+      const newDateLongestBreak = newDateBreaks.reduce(
+        (a, b) => {
+          const aMinutes = calculateSlotMinutes(a);
+          const bMinutes = calculateSlotMinutes(b);
+          return aMinutes > bMinutes ? a : b;
+        },
+        { start: "00:00", end: "00:00" }
+      );
+
+      const newDateLongestBreakMinutes =
+        calculateSlotMinutes(newDateLongestBreak);
+      const newEventMinutes = calculateSlotMinutes({
+        start: format(newEvent.start as Date, "HH:mm"),
+        end: format(newEvent.end as Date, "HH:mm"),
+      });
+
+      if (newDateLongestBreakMinutes > 15 && newEventMinutes > 15) {
+        toast("Only one long break (> 15 minutes) is allowed per day.");
+        eventDropInfo.revert();
+        return;
+      }
+    }
+
+    const newSlot: slot = {
+      id: uuidv4(),
+      title: newEvent.title,
+      description: newEvent._def.extendedProps.description,
+      start: format(newEvent.start as Date, "HH:mm"),
+      end: format(newEvent.end as Date, "HH:mm"),
+      date: newDate,
+      type: newEvent._def.extendedProps.type,
+    };
+
+    setAllSlots(() => {
+      // remove old slot
+      const newSlots = allSlots.map((s) => {
+        if (s.date === oldDate) {
+          return {
+            ...s,
+            slots: s.slots.filter(
+              (slot) => slot.id !== oldEvent._def.extendedProps.slotId
+            ),
+          };
+        } else {
+          return s;
+        }
+      });
+      // add new slot
+      return newSlots.map((s) => {
+        if (s.date === newDate) {
+          return {
+            ...s,
+            slots: [...s.slots, newSlot],
+          };
+        } else {
+          return s;
+        }
+      });
+    });
+  };
+
   // adjust popover position if it goes out of the viewport
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -83,20 +184,6 @@ export default function Calendar() {
     return () => observer.disconnect();
   }, []);
 
-  const handleEventClick = (arg: EventClickArg) => {
-    arg.jsEvent.stopPropagation();
-
-    if (arg.event._def.extendedProps.type === "buffer") {
-      toast("Cannot edit buffer slots");
-      return;
-    }
-
-    setEditEvent({
-      showOverlay: true,
-      eventData: arg.event,
-    });
-  };
-
   // Re-fetch events when slots change
   const calendarRef = useRef<FullCalendar | null>(null);
   useEffect(() => {
@@ -110,7 +197,7 @@ export default function Calendar() {
       <div className="flex-1 p-8">
         <FullCalendar
           ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           events={(info, onSuccess) => {
             const events = getEvents(info);
@@ -123,11 +210,7 @@ export default function Calendar() {
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay",
           }}
-          views={{
-            dayGridMonth: {
-              dayMaxEventRows: 3,
-            },
-          }}
+          dayMaxEvents={true}
           nowIndicator={true}
           // discard extra cells
           fixedWeekCount={false}
@@ -136,6 +219,10 @@ export default function Calendar() {
           slotDuration="00:15:00"
           // slotMinTime="08:00:00"
           // slotMaxTime="20:00:00"
+          // drag and drop features
+          editable={true}
+          eventDrop={handleEventDrop}
+          eventDurationEditable={false}
         />
       </div>
       {editEvent.showOverlay && <EditEvent />}

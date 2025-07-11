@@ -37,7 +37,7 @@ export default function DialogDemo() {
             <AddSchedule setOpen={setOpen} />
           </TabsContent>
           <TabsContent value="slot" className="w-full h-full">
-            <AddSlot />
+            <AddSlot setOpen={setOpen} />
           </TabsContent>
           <TabsContent value="leave" className="w-full h-full">
             <AddLeave setOpen={setOpen} />

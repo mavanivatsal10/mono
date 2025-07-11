@@ -24,12 +24,17 @@ import { Textarea } from "./ui/textarea";
 import { useTimetable } from "@/hooks/useTimetable";
 import { format } from "date-fns";
 import type { slot } from "@/types/types";
-import { useState } from "react";
-import { isOverlaping } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { calculateSlotMinutes, isOverlaping } from "@/lib/utils";
 
-export default function AddSlot() {
+export default function AddSlot({
+  setOpen,
+}: {
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const { allSlots, setAllSlots } = useTimetable();
   const [confirmTwice, setConfirmTwice] = useState(false);
+  const [confirmClicked, setConfirmClicked] = useState(false);
 
   const formSchema = z
     .object({
@@ -66,21 +71,12 @@ export default function AddSlot() {
       description: "",
       date: new Date(),
       start: "09:00",
-      end: "18:30",
+      end: "10:30",
       type: "slot" as "slot" | "break" | "leave",
     },
   });
 
   const addSlot = (data: z.infer<typeof formSchema>) => {
-    // TODO: add validation when user adds a break
-    /**
-     * entire day should have only one 15 < break < 45
-     * total of 3 breaks
-     * other breaks < 15 minutes
-     */
-
-    // TODO: popup should close after editing the slot
-
     const newSlot: slot = {
       id: crypto.randomUUID(),
       title: data.title,
@@ -94,13 +90,51 @@ export default function AddSlot() {
     const slotsToday =
       allSlots.find((s) => s.date === newSlot.date)?.slots || [];
 
+    if (newSlot.type === "break") {
+      const breaksToday = slotsToday.filter((s) => s.type === "break");
+      if (breaksToday.length >= 3) {
+        form.setError("isError", {
+          message: "You cannot have more than 3 breaks per day",
+          type: "custom",
+        });
+        return;
+      }
+
+      if (calculateSlotMinutes(newSlot) > 45) {
+        form.setError("isError", {
+          message: "Cannot have breaks longer than 45 minutes.",
+          type: "custom",
+        });
+        return;
+      }
+
+      const longestBreak = breaksToday.reduce(
+        (prev, curr) => {
+          return calculateSlotMinutes(prev) > calculateSlotMinutes(curr)
+            ? prev
+            : curr;
+        },
+        { start: "00:00", end: "00:00" }
+      );
+      if (
+        calculateSlotMinutes(longestBreak) > 15 &&
+        calculateSlotMinutes(newSlot) > 15
+      ) {
+        form.setError("isError", {
+          message: "Cannot have more than one long breaks (> 15 minutes).",
+          type: "custom",
+        });
+        return;
+      }
+    }
+
     if (
       slotsToday.some((s) => newSlot.id !== s.id && isOverlaping(newSlot, s))
     ) {
       if (!confirmTwice) {
         form.setError("isError", {
           message:
-            "New timing is overlapping with another slot. Please click confirm again to update. The overlapping slots will be removed.",
+            "New timing is overlapping with another slot(s) or leave. Please click confirm again to update. The overlapping slots will be removed.",
           type: "custom",
         });
         setConfirmTwice(true);
@@ -123,7 +157,47 @@ export default function AddSlot() {
           : s
       );
     });
+
+    setOpen(false);
   };
+
+  const watchStart = form.watch("start");
+  const watchEnd = form.watch("end");
+  const watchType = form.watch("type");
+  useEffect(() => {
+    if (confirmClicked && watchType === "break") {
+      const date = form.getValues("date");
+      if (!date) return;
+      const d = format(date, "yyyy-MM-dd");
+      const slotsToday = allSlots.find((s) => s.date === d)?.slots || [];
+      const breaksToday = slotsToday.filter((s) => s.type === "break");
+
+      if (calculateSlotMinutes({ start: watchStart, end: watchEnd }) > 45) {
+        form.setError("isError", {
+          message: "Cannot have breaks longer than 45 minutes.",
+          type: "custom",
+        });
+        return;
+      }
+
+      const longestBreak = breaksToday.reduce(
+        (prev, curr) => {
+          return calculateSlotMinutes(prev) > calculateSlotMinutes(curr)
+            ? prev
+            : curr;
+        },
+        { start: "00:00", end: "00:00" }
+      );
+      if (calculateSlotMinutes(longestBreak) > 15) {
+        form.setError("isError", {
+          message: "Cannot have more than one long breaks (> 15 minutes).",
+          type: "custom",
+        });
+        return;
+      }
+    }
+    form.clearErrors("isError");
+  }, [watchStart, watchEnd, watchType]);
 
   return (
     <Form {...form}>
@@ -240,7 +314,7 @@ export default function AddSlot() {
               {form.formState.errors.isError.message}
             </p>
           )}
-          <Button type="submit">
+          <Button type="submit" onClick={() => setConfirmClicked(true)}>
             {confirmTwice ? "Confirm" : "Create Slot"}
           </Button>
         </div>

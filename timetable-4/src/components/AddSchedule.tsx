@@ -174,11 +174,14 @@ export default function AddSchedule({
             code: z.ZodIssueCode.custom,
           });
         } else if (breakMins > 15) {
-          const longestBreak = data.breaks.reduce((prev, curr) => {
-            const prevMins = calculateSlotMinutes(prev);
-            const currMins = calculateSlotMinutes(curr);
-            return prevMins > currMins ? prev : curr;
-          });
+          const longestBreak = data.breaks.reduce(
+            (prev, curr) => {
+              const prevMins = calculateSlotMinutes(prev);
+              const currMins = calculateSlotMinutes(curr);
+              return prevMins > currMins ? prev : curr;
+            },
+            { start: "00:00", end: "00:00" }
+          );
           const longestBreakMins = calculateSlotMinutes(longestBreak);
           if (longestBreak !== breakItem && longestBreakMins > 15) {
             ctx.addIssue({
@@ -508,11 +511,14 @@ export default function AddSchedule({
       }
 
       // remove "Only one long break (> 15 minutes) is allowed."
-      const longestBreak = watchBreaks.reduce((prev, curr) => {
-        const prevMins = calculateSlotMinutes(prev);
-        const currMins = calculateSlotMinutes(curr);
-        return prevMins > currMins ? prev : curr;
-      });
+      const longestBreak = watchBreaks.reduce(
+        (prev, curr) => {
+          const prevMins = calculateSlotMinutes(prev);
+          const currMins = calculateSlotMinutes(curr);
+          return prevMins > currMins ? prev : curr;
+        },
+        { start: "00:00", end: "00:00" }
+      );
       const longestBreakMins = calculateSlotMinutes(longestBreak);
       if (longestBreakMins > 15) {
         for (let j = 0; j < watchBreaks.length; j++) {
